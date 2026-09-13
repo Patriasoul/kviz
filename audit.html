@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PatriaSoul — Audit pitanja</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html"><span class="brand-mark">PS</span><span>PATRIA<span>SOUL</span></span></a>
+    <a class="back-link" href="index.html">← Kviz</a>
+  </header>
+  <main class="section audit-page">
+    <div class="section-heading">
+      <p class="eyebrow">PATRIA SOUL · KONTROLA</p>
+      <h1>Audit baze pitanja</h1>
+      <p class="lead">Automatska provjera svih pitanja iz izvornih banaka 800 + 1200. Izvorne datoteke se ne mijenjaju.</p>
+    </div>
+    <section class="audit-summary" id="summary">Provjera u tijeku…</section>
+    <section class="section">
+      <h2>Kategorije</h2>
+      <div id="categories" class="quiz-grid"></div>
+    </section>
+    <section class="section">
+      <h2>Problemi za ručni pregled</h2>
+      <div id="issues">Provjera…</div>
+    </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/gh/Patriasoul/patriasoul@main/question_banks_800.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/Patriasoul/patriasoul@main/question_banks_1200.js"></script>
+  <script src="data/normalize.js"></script>
+  <script src="assets/js/audit.js"></script>
+</body>
+</html>
