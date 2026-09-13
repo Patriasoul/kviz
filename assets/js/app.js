@@ -3,7 +3,18 @@
   const category = params.get('category') || 'opce';
   const all = window.PATRIA_SOUL_QUESTIONS || [];
   const questions = all.filter(q => q.category === category).slice(0, 10);
-  const categoryNames = {opce:'HRVATSKO OPĆE ZNANJE',povijest:'POVIJEST', 'domovinski-rat':'DOMOVINSKI RAT',geografija:'GEOGRAFIJA HRVATSKE',kultura:'KULTURA I BAŠTINA',glagoljica:'GLAGOLJICA'};
+  const categoryNames = {
+    opce:'HRVATSKO OPĆE ZNANJE',
+    povijest:'POVIJEST HRVATSKE',
+    'domovinski-rat':'DOMOVINSKI RAT',
+    geografija:'GEOGRAFIJA HRVATSKE',
+    priroda:'PRIRODA HRVATSKE',
+    bastina:'KULTURA I BAŠTINA',
+    glagoljica:'GLAGOLJICA I HRVATSKA BAŠTINA',
+    vjera:'VJERA I SAKRALNA BAŠTINA',
+    sport:'SPORT',
+    znanost:'ZNANOST I IZUMI'
+  };
   const label=document.getElementById('category-label');
   if(label) label.textContent=categoryNames[category]||'PATRIA SOUL KVIZ';
   if(!questions.length){location.href='index.html';return;}
@@ -24,7 +35,7 @@
     });
     timerId=setInterval(()=>{seconds--; $('timer').textContent=seconds;if(seconds<=0){clearInterval(timerId);choose(-1,null);}},1000);
   }
-  function choose(choice,clicked){
+  function choose(choice){
     clearInterval(timerId);
     const correct=questions[index].correctIndex;
     document.querySelectorAll('.answer').forEach((b,i)=>{b.disabled=true;if(i===correct)b.classList.add('correct');if(i===choice&&choice!==correct)b.classList.add('wrong');});
