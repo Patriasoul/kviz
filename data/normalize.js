@@ -3,12 +3,17 @@
 (function () {
   const extra = window.PATRIA_EXTRA_QUESTIONS || {};
   const imported = [];
-  const natureTerms = /nacionalni park|park prirode|rijek|planin|jezer|slap|kanjon|ptica|sisav|špilj|krš|vrh |otok/i;
+
+  // Konzervativno prebacivanje Geografije u Prirodu:
+  // geografski pojmovi poput otoka, rijeka, planina i vrhova ostaju Geografija
+  // osim ako je pitanje očito o zaštiti prirode, vrstama ili staništima.
+  const natureStrong = /nacionalni park|park prirode|zaštić|zaštitni|rezervat|bioraznolik|staništ|endem|flora|fauna|bjeloglavi sup|smeđi medvjed|autohtoni.*sisav|autohtoni.*vrst/i;
   const glagoliticTerms = /glagolj|bašćansk|povaljsk|misal|glagolji/i;
 
   function categoryFor(sourceCategory, question) {
     const text = String(question || '');
     const c = String(sourceCategory || '').toLowerCase();
+
     if (c === 'domovinski_rat' || c === 'domovinski-rat') return 'domovinski-rat';
     if (c === 'sport') return 'sport';
     if (c === 'znanost') return 'znanost';
@@ -16,8 +21,12 @@
     if (c === 'glagoljica') return 'glagoljica';
     if (c === 'vjera' || c === 'sakralna_bastina') return 'vjera';
     if (c === 'kultura' || c === 'bastina') return 'bastina';
-    if (c === 'geografija') return natureTerms.test(text) ? 'priroda' : 'geografija';
+
+    if (c === 'geografija') return natureStrong.test(text) ? 'priroda' : 'geografija';
+
+    // Povijesno pitanje ostaje Povijest osim ako je izrazito glagoljično.
     if (c === 'povijest') return glagoliticTerms.test(text) ? 'glagoljica' : 'povijest';
+
     return c || 'opce';
   }
 
