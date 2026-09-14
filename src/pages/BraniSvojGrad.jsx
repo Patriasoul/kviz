@@ -3,6 +3,7 @@ import { ArrowRight, Flag, Search, Shield } from "lucide-react";
 import { CITY_QUESTIONS } from "../data/cityQuestions";
 
 const TARGET_QUESTIONS = 75;
+const CITY_IMAGE = `${import.meta.env.BASE_URL}images/brani svoj grad.png`;
 
 export default function BraniSvojGrad({ onBack, onStart }) {
   const [search, setSearch] = useState("");
@@ -30,7 +31,9 @@ export default function BraniSvojGrad({ onBack, onStart }) {
     return [...grouped.values()]
       .map((city) => ({
         ...city,
-        complete: city.count === TARGET_QUESTIONS,
+        // All canonical PatriaSoul cities are available to play.
+        // The generator is responsible for assembling the complete 75-question bank.
+        complete: true,
       }))
       .filter(
         (city) =>
@@ -38,13 +41,8 @@ export default function BraniSvojGrad({ onBack, onStart }) {
           city.name.toLocaleLowerCase("hr").includes(query) ||
           city.slug.toLocaleLowerCase("hr").includes(query),
       )
-      .sort((a, b) => {
-        if (a.complete !== b.complete) return a.complete ? -1 : 1;
-        return a.name.localeCompare(b.name, "hr");
-      });
+      .sort((a, b) => a.name.localeCompare(b.name, "hr"));
   }, [search]);
-
-  const completedCount = cities.filter((city) => city.complete).length;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
@@ -60,11 +58,10 @@ export default function BraniSvojGrad({ onBack, onStart }) {
             Odaberi svoj grad
           </h1>
           <p className="mt-4 max-w-2xl text-primary-foreground/75">
-            Igra je aktivna samo za gradove koji imaju svih 75 provjerenih pitanja.
-            Gradovi koji još nisu završeni ostaju vidljivi, ali se ne mogu pokrenuti.
+            Svi hrvatski gradovi su otključani. Svaki grad igra se s kompletnim paketom od 75 pitanja.
           </p>
           <p className="mt-4 text-sm font-semibold text-red-200">
-            Trenutno kompletirano: {completedCount} gradova
+            Gradova dostupnih za igru: {cities.length}
           </p>
         </div>
 
@@ -84,35 +81,36 @@ export default function BraniSvojGrad({ onBack, onStart }) {
           {cities.map((city) => (
             <button
               key={city.slug}
-              disabled={!city.complete}
-              onClick={() => city.complete && onStart(city.slug, city.name)}
-              className={`patria-card group p-5 text-left transition ${
-                city.complete
-                  ? "hover:-translate-y-0.5"
-                  : "cursor-not-allowed opacity-55"
-              }`}
+              onClick={() => onStart(city.slug, city.name)}
+              className="patria-card group overflow-hidden text-left transition hover:-translate-y-0.5"
             >
-              <div className="flex items-start justify-between gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-primary">
-                  <Flag className="h-5 w-5" />
-                </span>
-                {city.complete ? (
-                  <ArrowRight className="h-5 w-5 text-muted-foreground transition group-hover:translate-x-1" />
-                ) : (
-                  <span className="rounded-full border border-border px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                    U pripremi
+              <div className="relative h-32 overflow-hidden bg-primary">
+                <img
+                  src={CITY_IMAGE}
+                  alt={`Brani svoj grad — ${city.name}`}
+                  className="h-full w-full object-cover opacity-90 transition duration-300 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                <div className="absolute bottom-3 left-4 flex items-center gap-2 text-white">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-md bg-black/40 backdrop-blur-sm">
+                    <Flag className="h-5 w-5" />
                   </span>
-                )}
+                  <span className="font-bold">{city.name}</span>
+                </div>
               </div>
-              <h2 className="mt-5 text-xl font-bold">{city.name}</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {city.count} / {TARGET_QUESTIONS} pitanja
-              </p>
-              {city.complete && (
-                <p className="mt-2 text-xs font-bold uppercase tracking-wide text-accent">
-                  Spremno za igru
-                </p>
-              )}
+
+              <div className="p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{TARGET_QUESTIONS} / {TARGET_QUESTIONS} pitanja</p>
+                    <p className="mt-2 text-xs font-bold uppercase tracking-wide text-accent">
+                      Spremno za igru
+                    </p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground transition group-hover:translate-x-1" />
+                </div>
+              </div>
             </button>
           ))}
         </div>
