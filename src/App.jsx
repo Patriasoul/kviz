@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, CalendarDays, Flag, FileText, LogIn, LogOut, RotateCcw, ShieldCheck, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, Flag, FileText, LogIn, LogOut, RotateCcw, ShieldCheck, Trophy, UserRound } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
 import BraniSvojGrad from "./pages/BraniSvojGrad";
 import DailyQuiz from "./pages/DailyQuiz";
 import Auth from "./pages/Auth";
+import PlayerProfile from "./pages/PlayerProfile";
 import { useAuth } from "./AuthContext";
 import { saveQuizResult, saveQuizProgress, fetchLeaderboard } from "./lib/results";
 import { calculateQuizXp, getLevelFromXp, getBadgeForLevel } from "./lib/progression";
@@ -91,10 +92,7 @@ export default function App() {
 
   const resultReward = progressReward && (
     <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-5 text-left">
-      <div className="flex items-center gap-3">
-        <span className="text-3xl">{progressReward.badge?.[2]}</span>
-        <div><p className="text-xs font-bold uppercase tracking-[.14em] text-accent">PatriaSoul napredovanje</p><h3 className="text-xl font-bold">Level {progressReward.level} · {progressReward.badge?.[1]}</h3></div>
-      </div>
+      <div className="flex items-center gap-3"><span className="text-3xl">{progressReward.badge?.[2]}</span><div><p className="text-xs font-bold uppercase tracking-[.14em] text-accent">PatriaSoul napredovanje</p><h3 className="text-xl font-bold">Level {progressReward.level} · {progressReward.badge?.[1]}</h3></div></div>
       <p className="mt-3 text-sm font-semibold">+{progressReward.xp} XP</p>
       <p className="mt-1 text-sm text-muted-foreground">Tvoj napredak za ovaj kviz je spremljen.</p>
     </div>
@@ -117,13 +115,14 @@ export default function App() {
           <button onClick={home} className="flex items-center gap-3 font-display text-2xl font-bold"><img src="/images/logo Patriasoul.png" alt="PatriaSoul" className="h-11 w-auto object-contain" /><span className="sr-only">PatriaSoul</span></button>
           <nav className="flex flex-wrap items-center justify-end gap-3 text-sm">
             <button onClick={home}>Početna</button><button onClick={startDaily}>Dnevni kviz</button><button onClick={() => setScreen("cities")}>Brani svoj grad</button><button onClick={openLeaderboard}>Rang-lista</button><button onClick={() => setScreen("rules")} className="flex items-center gap-1"><FileText className="h-4 w-4" /> Pravilnik</button>
-            {!isLoadingAuth && (isAuthenticated ? <button onClick={logout} title={user?.email} className="flex items-center gap-1"><LogOut className="h-4 w-4" /> Odjava</button> : supabaseConfigured && <button onClick={() => setScreen("auth")} className="flex items-center gap-1"><LogIn className="h-4 w-4" /> Prijava</button>)}
+            {!isLoadingAuth && (isAuthenticated ? <><button onClick={() => setScreen("profile")} className="flex items-center gap-1"><UserRound className="h-4 w-4" /> Moj profil</button><button onClick={logout} title={user?.email} className="flex items-center gap-1"><LogOut className="h-4 w-4" /> Odjava</button></> : supabaseConfigured && <button onClick={() => setScreen("auth")} className="flex items-center gap-1"><LogIn className="h-4 w-4" /> Prijava</button>)}
           </nav>
         </div></div>
       </header>
 
       {screen === "rules" && <Pravilnik onBack={() => setScreen("home")} onAccept={acceptRules} />}
       {screen === "auth" && <Auth onBack={home} />}
+      {screen === "profile" && isAuthenticated && <PlayerProfile user={user} onBack={home} />}
       {screen === "cities" && <BraniSvojGrad onBack={home} onStart={startCity} />}
       {screen === "daily" && <DailyQuiz onBack={home} onComplete={completeDailyQuiz} />}
       {screen === "quiz" && <QuizPlayer questions={round} title="PatriaSoul Hrvatski kviz" subtitle={category === "sve" ? "Kombinirani kviz" : names[category]} timeLimit={20} onComplete={completeQuiz} onQuit={home} />}
