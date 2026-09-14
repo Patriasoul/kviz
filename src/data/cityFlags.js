@@ -14,32 +14,37 @@ function normalize(value = "") {
 }
 
 /*
- * The city card must never use the Brani svoj grad hero image as a city flag.
- * We resolve only real flag media candidates from Wikimedia Commons.  The
- * component tries candidates in order and shows a neutral verification state
- * if Commons does not have the expected media file.
- *
- * The government currently lists 127 Croatian cities. The question catalog is
- * the source of the cards; this module is deliberately independent from the
- * question count so flags can be attached to every city as the catalog grows.
+ * City cards use the city's heraldic symbol, never the Brani svoj grad hero image.
+ * We try the common Wikimedia Commons naming conventions for both official
+ * coats of arms (grb) and official flags. A working Commons file is displayed;
+ * if one naming variant is missing, the next verified naming variant is tried.
  */
 export function cityFlagCandidates(cityName) {
   const name = String(cityName || "").trim();
   const plain = normalize(name);
-
   if (!name) return [];
 
   const candidates = [
+    `Coat of arms of ${name}.svg`,
+    `Coat of arms of the City of ${name}.svg`,
+    `Coat of arms of ${name}.png`,
+    `Coat of arms of the City of ${name}.png`,
+    `Grb ${name}.svg`,
+    `Grb Grada ${name}.svg`,
+    `Grb ${name}.png`,
+    `Grb Grada ${name}.png`,
     `Flag of ${name}.svg`,
     `Flag of the City of ${name}.svg`,
     `Flag of ${name}.png`,
     `Zastava ${name}.svg`,
     `Zastava Grada ${name}.svg`,
     `Zastava ${name}.png`,
+    `Coat of arms of ${plain}.svg`,
+    `Coat of arms of the City of ${plain}.svg`,
+    `Grb ${plain}.svg`,
+    `Grb Grada ${plain}.svg`,
     `Flag of ${plain}.svg`,
-    `Flag of ${plain}.png`,
     `Zastava ${plain}.svg`,
-    `Zastava ${plain}.png`,
   ];
 
   return [...new Set(candidates)].map(commonsFile);
@@ -54,6 +59,8 @@ export const CITY_FLAG_SYSTEM = {
   country: "Hrvatska",
   scope: "gradovi",
   source: "Wikimedia Commons / gradska heraldika",
-  sourcePolicy: "Stvarna gradska zastava ima prednost pred fotografijom ili generičkom grafikom. Commons se koristi kao javno dostupno spremište zastava; pojedinačni izvor ostaje provjerljiv kroz gradski naziv i Commons kategoriju.",
+  primaryAsset: "službeni grb grada",
+  fallbackAsset: "službena zastava grada",
+  sourcePolicy: "Na kartici grada prikazuje se službeni gradski grb kada je javno dostupan; ako nije dostupan pod očekivanim nazivom, sustav pokušava službenu zastavu. Ne koristi se generička PatriaSoul slika.",
   fallback: "neutral-verification",
 };
