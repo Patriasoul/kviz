@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Award, LockKeyhole, Trophy } from "lucide-react";
+import { ArrowLeft, Award, LockKeyhole, ShieldCheck, Trophy } from "lucide-react";
 import { fetchBadges, fetchProgress } from "../lib/results";
 import { ACHIEVEMENTS, QUIZ_PROGRESSION } from "../lib/progression";
+import { supabase } from "../supabase";
+import AdminPanel from "./AdminPanel";
 
 const quizOrder = ["croatian", "city", "daily"];
 
@@ -10,20 +12,24 @@ export default function PlayerProfile({ user, onBack }) {
   const [badges, setBadges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
     async function load() {
       if (!user?.id) return;
       setLoading(true);
-      const [progressResult, badgesResult] = await Promise.all([
+      const [progressResult, badgesResult, adminResult] = await Promise.all([
         fetchProgress(user.id),
         fetchBadges(user.id),
+        supabase?.rpc("is_admin"),
       ]);
       if (!active) return;
       setProgress(progressResult.data ?? []);
       setBadges(badgesResult.data ?? []);
-      setError(progressResult.error?.message || badgesResult.error?.message || "");
+      setIsAdmin(Boolean(adminResult?.data));
+      setError(progressResult.error?.message || badgesResult.error?.message || adminResult?.error?.message || "");
       setLoading(false);
     }
     load();
@@ -35,12 +41,17 @@ export default function PlayerProfile({ user, onBack }) {
   const totalXp = progress.reduce((sum, item) => sum + Number(item.xp || 0), 0);
   const totalPlayed = progress.reduce((sum, item) => sum + Number(item.quizzes_played || 0), 0);
 
+  if (adminOpen && isAdmin) return <AdminPanel onBack={() => setAdminOpen(false)} />;
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
       <div className="patria-card overflow-hidden">
         <div className="bg-primary px-6 py-8 text-primary-foreground sm:px-8">
-          <button onClick={onBack} className="mb-5 inline-flex items-center gap-2 text-sm opacity-80 hover:opacity-100"><ArrowLeft className="h-4 w-4" /> Natrag</button>
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center justify-between gap-4">
+            <button onClick={onBack} className="inline-flex items-center gap-2 text-sm opacity-80 hover:opacity-100"><ArrowLeft className="h-4 w-4" /> Natrag</button>
+            {isAdmin && <button onClick={() => setAdminOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15"><ShieldCheck className="h-4 w-4" /> Administracija</button>}
+          </div>
+          <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div><p className="text-sm font-bold uppercase tracking-[.16em] text-red-200">PatriaSoul igrač</p><h1 className="mt-2 font-display text-4xl font-bold">{user?.user_metadata?.display_name || user?.email?.split("@")[0] || "Igrač"}</h1><p className="mt-2 text-sm opacity-75">{user?.email}</p></div>
             <div className="rounded-2xl border border-white/15 bg-white/10 px-6 py-4 text-center"><Trophy className="mx-auto h-8 w-8 text-red-200" /><p className="mt-2 text-2xl font-bold">{totalXp} XP</p><p className="text-xs opacity-75">{totalPlayed} odigranih kvizova</p></div>
           </div>
@@ -54,22 +65,11 @@ export default function PlayerProfile({ user, onBack }) {
                 const next = QUIZ_PROGRESSION[quizType].badges.find(([level]) => level > item.level);
                 const nextStartXp = next ? (next[0] - 1) * 100 : item.xp;
                 const progressToNext = next ? Math.min(100, Math.max(0, ((item.xp - nextStartXp) / 100) * 100)) : 100;
-                return <section key={quizType} className="rounded-2xl border border-border bg-card p-5">
-                  <p className="text-xs font-bold uppercase tracking-[.14em] text-accent">{QUIZ_PROGRESSION[quizType].label}</p>
-                  <div className="mt-4 flex items-center gap-3"><span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-2xl">{badge[2]}</span><div><p className="font-bold">Level {item.level}</p><p className="text-sm text-muted-foreground">{badge[1]}</p></div></div>
-                  <div className="mt-5 flex justify-between text-xs font-semibold"><span>{item.xp} XP</span><span>{next ? `Sljedeći: Lv ${next[0]}` : "Maksimalna značka"}</span></div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progressToNext}%` }} /></div>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground"><span>{item.quizzes_played} kvizova</span><span className="text-right">Najbolje {item.best_percentage}%</span>{quizType === "daily" && <><span>Niz {item.current_streak} dana</span><span className="text-right">Rekord {item.best_streak}</span></>}</div>
-                </section>;
+                return <section key={quizType} className="rounded-2xl border border-border bg-card p-5"><p className="text-xs font-bold uppercase tracking-[.14em] text-accent">{QUIZ_PROGRESSION[quizType].label}</p><div className="mt-4 flex items-center gap-3"><span className="flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-2xl">{badge[2]}</span><div><p className="font-bold">Level {item.level}</p><p className="text-sm text-muted-foreground">{badge[1]}</p></div></div><div className="mt-5 flex justify-between text-xs font-semibold"><span>{item.xp} XP</span><span>{next ? `Sljedeći: Lv ${next[0]}` : "Maksimalna značka"}</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progressToNext}%` }} /></div><div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground"><span>{item.quizzes_played} kvizova</span><span className="text-right">Najbolje {item.best_percentage}%</span>{quizType === "daily" && <><span>Niz {item.current_streak} dana</span><span className="text-right">Rekord {item.best_streak}</span></>}</div></section>;
               })}
             </div>
-            <section className="mt-10"><div className="flex items-center gap-3"><Award className="h-6 w-6 text-accent" /><div><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h2 className="text-2xl font-bold">Moje značke</h2></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {quizOrder.flatMap((quizType) => QUIZ_PROGRESSION[quizType].badges.map(([level, name, icon]) => ({ quizType, id: `${quizType}_level_${level}`, name, icon, level, earned: badgeIds.has(`${quizType}_level_${level}`) }))).map((badge) => <div key={badge.id} className={`rounded-2xl border p-4 ${badge.earned ? "border-red-200 bg-red-50/60" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-center gap-4"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-2xl">{badge.earned ? badge.icon : <LockKeyhole className="h-5 w-5 text-muted-foreground" />}</span><div><p className="text-xs font-bold uppercase tracking-[.12em] text-muted-foreground">{QUIZ_PROGRESSION[badge.quizType].label} · Lv {badge.level}</p><p className="font-bold">{badge.name}</p></div></div></div>)}
-            </div></section>
-            <section className="mt-10"><div className="flex items-center gap-3"><Award className="h-6 w-6 text-accent" /><div><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">Postignuća</p><h2 className="text-2xl font-bold">Posebne značke</h2></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {quizOrder.flatMap((quizType) => ACHIEVEMENTS[quizType].map(([id, name, condition]) => ({ quizType, id, name, condition, earned: badgeIds.has(id) }))).map((badge) => <div key={badge.id} className={`rounded-2xl border p-4 ${badge.earned ? "border-amber-200 bg-amber-50/60" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-start gap-3"><span className="mt-1 text-xl">{badge.earned ? "🏅" : "🔒"}</span><div><p className="font-bold">{badge.name}</p><p className="mt-1 text-xs text-muted-foreground">{badge.condition}</p></div></div></div>)}
-              {ACHIEVEMENTS.patria.map(([id, name, condition]) => <div key={id} className={`rounded-2xl border p-4 ${badgeIds.has(id) ? "border-amber-300 bg-amber-50/80" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-start gap-3"><span className="mt-1 text-xl">{badgeIds.has(id) ? "👑" : "🔒"}</span><div><p className="font-bold">{name}</p><p className="mt-1 text-xs text-muted-foreground">{condition}</p></div></div></div>)}
-            </div></section>
+            <section className="mt-10"><div className="flex items-center gap-3"><Award className="h-6 w-6 text-accent" /><div><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h2 className="text-2xl font-bold">Moje značke</h2></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{quizOrder.flatMap((quizType) => QUIZ_PROGRESSION[quizType].badges.map(([level, name, icon]) => ({ quizType, id: `${quizType}_level_${level}`, name, icon, level, earned: badgeIds.has(`${quizType}_level_${level}`) }))).map((badge) => <div key={badge.id} className={`rounded-2xl border p-4 ${badge.earned ? "border-red-200 bg-red-50/60" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-center gap-4"><span className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-2xl">{badge.earned ? badge.icon : <LockKeyhole className="h-5 w-5 text-muted-foreground" />}</span><div><p className="text-xs font-bold uppercase tracking-[.12em] text-muted-foreground">{QUIZ_PROGRESSION[badge.quizType].label} · Lv {badge.level}</p><p className="font-bold">{badge.name}</p></div></div></div>)}</div></section>
+            <section className="mt-10"><div className="flex items-center gap-3"><Award className="h-6 w-6 text-accent" /><div><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">Postignuća</p><h2 className="text-2xl font-bold">Posebne značke</h2></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{quizOrder.flatMap((quizType) => ACHIEVEMENTS[quizType].map(([id, name, condition]) => ({ quizType, id, name, condition, earned: badgeIds.has(id) }))).map((badge) => <div key={badge.id} className={`rounded-2xl border p-4 ${badge.earned ? "border-amber-200 bg-amber-50/60" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-start gap-3"><span className="mt-1 text-xl">{badge.earned ? "🏅" : "🔒"}</span><div><p className="font-bold">{badge.name}</p><p className="mt-1 text-xs text-muted-foreground">{badge.condition}</p></div></div></div>)}{ACHIEVEMENTS.patria.map(([id, name, condition]) => <div key={id} className={`rounded-2xl border p-4 ${badgeIds.has(id) ? "border-amber-300 bg-amber-50/80" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-start gap-3"><span className="mt-1 text-xl">{badgeIds.has(id) ? "👑" : "🔒"}</span><div><p className="font-bold">{name}</p><p className="mt-1 text-xs text-muted-foreground">{condition}</p></div></div></div>)}</div></section>
           </>}
         </div>
       </div>
