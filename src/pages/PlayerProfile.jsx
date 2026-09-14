@@ -68,6 +68,7 @@ export default function PlayerProfile({ user, onBack }) {
             </div></section>
             <section className="mt-10"><div className="flex items-center gap-3"><Award className="h-6 w-6 text-accent" /><div><p className="text-xs font-bold uppercase tracking-[.16em] text-accent">Postignuća</p><h2 className="text-2xl font-bold">Posebne značke</h2></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {quizOrder.flatMap((quizType) => ACHIEVEMENTS[quizType].map(([id, name, condition]) => ({ quizType, id, name, condition, earned: badgeIds.has(id) }))).map((badge) => <div key={badge.id} className={`rounded-2xl border p-4 ${badge.earned ? "border-amber-200 bg-amber-50/60" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-start gap-3"><span className="mt-1 text-xl">{badge.earned ? "🏅" : "🔒"}</span><div><p className="font-bold">{badge.name}</p><p className="mt-1 text-xs text-muted-foreground">{badge.condition}</p></div></div></div>)}
+              {ACHIEVEMENTS.patria.map(([id, name, condition]) => <div key={id} className={`rounded-2xl border p-4 ${badgeIds.has(id) ? "border-amber-300 bg-amber-50/80" : "border-border bg-secondary/30 opacity-55"}`}><div className="flex items-start gap-3"><span className="mt-1 text-xl">{badgeIds.has(id) ? "👑" : "🔒"}</span><div><p className="font-bold">{name}</p><p className="mt-1 text-xs text-muted-foreground">{condition}</p></div></div></div>)}
             </div></section>
           </>}
         </div>
