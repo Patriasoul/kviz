@@ -1,0 +1,50 @@
+name: PatriaSoul Quiz CI
+
+on:
+  push:
+    branches: ["quiz-engine", "main"]
+  pull_request:
+    branches: ["quiz-engine", "main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Generate data and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate canonical question data
+        run: npm run questions
+
+      - name: Validate generated question files
+        run: |
+          test -s src/data/questions.generated.js
+          test -s src/data/cityQuestions.generated.js
+          grep -q "export const QUESTIONS" src/data/questions.generated.js
+          grep -q "export const CITY_QUESTIONS" src/data/cityQuestions.generated.js
+
+      - name: Production build
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: patriasoul-kviz-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 7
