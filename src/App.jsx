@@ -6,7 +6,8 @@ import BraniSvojGrad from "./pages/BraniSvojGrad";
 import DailyQuiz from "./pages/DailyQuiz";
 import Auth from "./pages/Auth";
 import { useAuth } from "./AuthContext";
-import { saveQuizResult, fetchLeaderboard } from "./lib/results";
+import { saveQuizResult, saveQuizProgress, fetchLeaderboard } from "./lib/results";
+import { calculateQuizXp, getLevelFromXp, getBadgeForLevel } from "./lib/progression";
 import QUESTIONS from "./data/questions";
 import { CITY_QUESTIONS } from "./data/cityQuestions";
 import { pickQuestions, pickCityQuestions } from "./lib/questionEngine";
@@ -36,34 +37,48 @@ export default function App() {
   const [rulesAccepted, setRulesAccepted] = useState(() => localStorage.getItem("patriasoul_rules_accepted") === "1");
   const [leaderboard, setLeaderboard] = useState([]);
   const [saveMessage, setSaveMessage] = useState("");
+  const [progressReward, setProgressReward] = useState(null);
 
   const start = (cat = "sve") => {
     if (!rulesAccepted) { setScreen("rules"); return; }
     const selected = pickQuestions(QUESTIONS, 10, { category: cat === "sve" ? null : cat });
     if (!selected.length) { setCategory(cat); setScreen("unavailable"); return; }
-    setCategory(cat); setCity(null); setRound(selected); setResult(null); setScreen("quiz");
+    setCategory(cat); setCity(null); setRound(selected); setResult(null); setProgressReward(null); setScreen("quiz");
   };
   const startCity = (citySlug, cityName) => {
     if (!rulesAccepted) { setScreen("rules"); return; }
     const selected = pickCityQuestions(CITY_QUESTIONS, citySlug, 10);
     if (selected.length < 10) { setCity({ slug: citySlug, name: cityName, count: selected.length }); setScreen("city-unavailable"); return; }
-    setCity({ slug: citySlug, name: cityName, count: 75 }); setCategory("city"); setRound(selected); setResult(null); setScreen("city-quiz");
+    setCity({ slug: citySlug, name: cityName, count: 75 }); setCategory("city"); setRound(selected); setResult(null); setProgressReward(null); setScreen("city-quiz");
   };
-  const startDaily = () => { if (!rulesAccepted) { setScreen("rules"); return; } setCity(null); setCategory("daily"); setResult(null); setScreen("daily"); };
+  const startDaily = () => { if (!rulesAccepted) { setScreen("rules"); return; } setCity(null); setCategory("daily"); setResult(null); setProgressReward(null); setScreen("daily"); };
   const acceptRules = () => { localStorage.setItem("patriasoul_rules_accepted", "1"); setRulesAccepted(true); setScreen("home"); };
-  const home = () => { setScreen("home"); setRound([]); setResult(null); setCity(null); setCategory("sve"); };
-  const cityHome = () => { setScreen("cities"); setRound([]); setResult(null); };
+  const home = () => { setScreen("home"); setRound([]); setResult(null); setCity(null); setCategory("sve"); setProgressReward(null); };
+  const cityHome = () => { setScreen("cities"); setRound([]); setResult(null); setProgressReward(null); };
 
   const persistResult = async (quizType, quizResult, extra = {}) => {
     setSaveMessage("");
     if (!isAuthenticated) return;
     const { error } = await saveQuizResult({ quizType, category: extra.category ?? null, citySlug: extra.citySlug ?? null, score: quizResult.score, total: quizResult.total, timeSeconds: quizResult.timeSeconds });
-    if (error) setSaveMessage(`Rezultat nije spremljen: ${error.message}`);
-    else setSaveMessage("Rezultat je spremljen na rang-listu.");
+    if (error) {
+      setSaveMessage(`Rezultat nije spremljen: ${error.message}`);
+      return;
+    }
+    const xp = calculateQuizXp({ score: quizResult.score, total: quizResult.total, quizType });
+    const progress = await saveQuizProgress({ quizType, score: quizResult.score, total: quizResult.total, timeSeconds: quizResult.timeSeconds, xp });
+    if (progress.error) {
+      setSaveMessage(`Rezultat je spremljen, ali napredovanje nije: ${progress.error.message}`);
+      return;
+    }
+    const reward = progress.data ?? {};
+    const level = Number(reward.level ?? getLevelFromXp(reward.xp ?? xp));
+    const badge = getBadgeForLevel(quizType, level);
+    setProgressReward({ quizType, xp, level, badge, reward });
+    setSaveMessage("Rezultat i napredovanje su spremljeni.");
   };
-  const completeQuiz = (quizResult) => { setResult(quizResult); setScreen("result"); void persistResult("croatian", quizResult, { category: category === "sve" ? null : category }); };
-  const completeCityQuiz = (quizResult) => { setResult(quizResult); setScreen("city-result"); void persistResult("city", quizResult, { citySlug: city?.slug }); };
-  const completeDailyQuiz = (quizResult) => { setResult(quizResult); setScreen("daily-result"); void persistResult("daily", quizResult); };
+  const completeQuiz = (quizResult) => { setResult(quizResult); setProgressReward(null); setScreen("result"); void persistResult("croatian", quizResult, { category: category === "sve" ? null : category }); };
+  const completeCityQuiz = (quizResult) => { setResult(quizResult); setProgressReward(null); setScreen("city-result"); void persistResult("city", quizResult, { citySlug: city?.slug }); };
+  const completeDailyQuiz = (quizResult) => { setResult(quizResult); setProgressReward(null); setScreen("daily-result"); void persistResult("daily", quizResult); };
 
   const openLeaderboard = async () => {
     setScreen("leaderboard");
@@ -73,6 +88,17 @@ export default function App() {
   };
 
   useEffect(() => { if (["quiz", "city-quiz", "daily"].includes(screen)) window.scrollTo({ top: 0, behavior: "smooth" }); }, [screen]);
+
+  const resultReward = progressReward && (
+    <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-5 text-left">
+      <div className="flex items-center gap-3">
+        <span className="text-3xl">{progressReward.badge?.[2]}</span>
+        <div><p className="text-xs font-bold uppercase tracking-[.14em] text-accent">PatriaSoul napredovanje</p><h3 className="text-xl font-bold">Level {progressReward.level} · {progressReward.badge?.[1]}</h3></div>
+      </div>
+      <p className="mt-3 text-sm font-semibold">+{progressReward.xp} XP</p>
+      <p className="mt-1 text-sm text-muted-foreground">Tvoj napredak za ovaj kviz je spremljen.</p>
+    </div>
+  );
 
   const resultActions = (retry, back = home) => (
     <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
@@ -113,9 +139,9 @@ export default function App() {
         <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6"><label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4"><input type="checkbox" checked={rulesAccepted} onChange={(e) => { setRulesAccepted(e.target.checked); if (e.target.checked) localStorage.setItem("patriasoul_rules_accepted", "1"); else localStorage.removeItem("patriasoul_rules_accepted"); }} className="mt-1 h-4 w-4 accent-red-700" /><span className="text-sm">Prihvaćam <button onClick={(e) => { e.preventDefault(); setScreen("rules"); }} className="font-semibold text-accent underline">Pravilnik o igranju kvizova</button>.</span></label></section>
       </main>}
 
-      {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Bravo na sudjelovanju.</p><p className="mt-2 text-muted-foreground">Pitanja su uzeta iz postojeće PatriaSoul baze.</p>{resultActions(() => start(category))}</div></div></main>}
-      {screen === "daily-result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><CalendarDays className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Dnevni rezultat</p><h1 className="mt-2 font-display text-4xl font-bold">Dnevni kviz</h1><p className="mt-4 text-5xl font-bold">{result.score} / {result.total}</p><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Današnji izazov je završen.</p><p className="mt-2 text-muted-foreground">Današnji set ostaje isti do promjene datuma.</p>{resultActions(startDaily)}</div></div></main>}
-      {screen === "city-result" && result && city && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><ShieldCheck className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Brani svoj grad</p><h1 className="mt-2 font-display text-4xl font-bold">{city.name}</h1><p className="mt-4 text-5xl font-bold">{result.score} / {result.total}</p><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Dobro odrađeno.</p><p className="mt-2 text-muted-foreground">Igra koristi 10 pitanja iz provjerene baze od 75 pitanja za ovaj grad.</p>{resultActions(() => startCity(city.slug, city.name), cityHome)}</div></div></main>}
+      {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Bravo na sudjelovanju.</p><p className="mt-2 text-muted-foreground">Pitanja su uzeta iz postojeće PatriaSoul baze.</p>{resultReward}{resultActions(() => start(category))}</div></div></main>}
+      {screen === "daily-result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><CalendarDays className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Dnevni rezultat</p><h1 className="mt-2 font-display text-4xl font-bold">Dnevni kviz</h1><p className="mt-4 text-5xl font-bold">{result.score} / {result.total}</p><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Današnji izazov je završen.</p><p className="mt-2 text-muted-foreground">Današnji set ostaje isti do promjene datuma.</p>{resultReward}{resultActions(startDaily)}</div></div></main>}
+      {screen === "city-result" && result && city && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><ShieldCheck className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Brani svoj grad</p><h1 className="mt-2 font-display text-4xl font-bold">{city.name}</h1><p className="mt-4 text-5xl font-bold">{result.score} / {result.total}</p><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Dobro odrađeno.</p><p className="mt-2 text-muted-foreground">Igra koristi 10 pitanja iz provjerene baze od 75 pitanja za ovaj grad.</p>{resultReward}{resultActions(() => startCity(city.slug, city.name), cityHome)}</div></div></main>}
       {screen === "city-unavailable" && city && <main className="mx-auto max-w-2xl px-4 py-16 text-center sm:py-24"><div className="patria-card p-8"><h1 className="font-display text-3xl font-bold">Grad još nema dovoljno pitanja</h1><p className="mt-4 text-muted-foreground">Za {city.name} trenutačno je dostupno {city.count} provjerenih pitanja. Igra se ne pokreće dok nema najmanje 10 pitanja.</p><button onClick={cityHome} className="patria-button-accent mt-7">Natrag na gradove</button></div></main>}
       {screen === "unavailable" && <main className="mx-auto max-w-2xl px-4 py-16 text-center sm:py-24"><div className="patria-card p-8"><h1 className="font-display text-3xl font-bold">Kategorija se priprema</h1><p className="mt-4 text-muted-foreground">Za ovu kategoriju trenutačno nema valjanih pitanja u službenoj bazi. Ne prikazujemo izmišljena demo pitanja.</p><button onClick={home} className="patria-button-accent mt-7">Natrag na početak</button></div></main>}
       <footer className="border-t border-border bg-primary text-primary-foreground"><div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-7 text-sm opacity-90 sm:flex-row sm:justify-between sm:px-6"><span>© PatriaSoul</span><button onClick={() => setScreen("rules")} className="underline underline-offset-4">Pravilnik</button></div></footer>
