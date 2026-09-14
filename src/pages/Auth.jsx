@@ -23,6 +23,11 @@ export default function Auth({ onBack, onAuthenticated }) {
     return () => listener.subscription.unsubscribe();
   }, [onAuthenticated]);
 
+  const finishAuthentication = () => {
+    if (onAuthenticated) onAuthenticated();
+    else onBack?.();
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setBusy(true);
@@ -48,7 +53,7 @@ export default function Auth({ onBack, onAuthenticated }) {
         setMessage("Registracija je uspješna. Provjeri e-mail i potvrdi račun prije prijave.");
       } else {
         setMessage("Račun je kreiran i prijavljeni ste.");
-        onAuthenticated?.();
+        finishAuthentication();
       }
     } else {
       const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
@@ -56,7 +61,7 @@ export default function Auth({ onBack, onAuthenticated }) {
         setError(signInError.message);
       } else {
         setMessage("Prijava uspješna.");
-        if (data.session) onAuthenticated?.();
+        if (data.session) finishAuthentication();
       }
     }
 
