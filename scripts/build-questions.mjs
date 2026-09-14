@@ -29,10 +29,16 @@ async function loadSource(url) {
 
 function prepareSource(source) {
   let prepared = source.replace(/([,{]\s*)([A-Za-z_$][\w$-]*-[\w$-]+)\s*:/g, "$1'$2':");
+
+  // Some verified city layers use the original compact shape:
+  // [answer, explanation, distractors]. Others use:
+  // [label, [answer, explanation, distractors]].
+  // Normalize both forms before executing the source.
   prepared = prepared.replace(
-    /\.\.\.f\[1\]\[2\]/g,
-    "...(Array.isArray(f[1][2]) ? f[1][2] : f[1][1])",
+    /\[f\[1\]\[0\],\.\.\.f\[1\]\[2\]\]/g,
+    "Array.isArray(f[1][2]) ? [f[1][0], ...f[1][2]] : (Array.isArray(f[1][1]) ? f[1][1] : [])",
   );
+
   return prepared;
 }
 
@@ -122,8 +128,6 @@ for (const q of cityQuestions) {
     normalized.correctIndex >= 0 &&
     normalized.correctIndex <= 3
   ) {
-    // Question IDs are only unique inside a city layer. Use cityId + id
-    // so identical local IDs from different cities are never discarded.
     uniqueCities.set(`${normalized.cityId}::${normalized.id}`, normalized);
   }
 }
@@ -149,8 +153,11 @@ for (const q of finalCityQuestions) cityCounts[q.cityId] = (cityCounts[q.cityId]
 console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
 console.log(`Brani svoj grad pitanja: ${finalCityQuestions.length}`);
 console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
+console.log(`Gradova s tocno 75 pitanja: ${Object.values(cityCounts).filter((count) => count === 75).length}`);
+console.log(`Gradova s manje od 75 pitanja: ${Object.values(cityCounts).filter((count) => count < 75).length}`);
+console.log(`Gradova s vise od 75 pitanja: ${Object.values(cityCounts).filter((count) => count > 75).length}`);
 if (skippedCitySources.length) {
-  console.warn(`Preskočeno neispravnih city layera: ${skippedCitySources.length}`);
+  console.warn(`Preskoceno neispravnih city layera: ${skippedCitySources.length}`);
   for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
 }
 console.log(`Generirano: ${output}`);
