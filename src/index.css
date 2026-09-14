@@ -52,101 +52,36 @@
     --radius: 0.6rem;
   }
 
-  * {
-    border-color: hsl(var(--border));
-    outline-color: hsl(var(--ring));
-  }
-
+  * { border-color: hsl(var(--border)); outline-color: hsl(var(--ring)); }
   html { scroll-behavior: smooth; }
-
-  body {
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: var(--font-body);
-    min-height: 100vh;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    letter-spacing: -0.015em;
-  }
-
+  body { background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--font-body); min-height: 100vh; }
+  h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 700; letter-spacing: -0.015em; }
   p { line-height: 1.7; }
-
   a { transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease; }
   button { transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease; }
-
-  ::selection {
-    background: hsl(var(--accent));
-    color: hsl(var(--accent-foreground));
-  }
-
-  :focus-visible {
-    outline: 2px solid hsl(var(--accent));
-    outline-offset: 3px;
-  }
+  ::selection { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
+  :focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 3px; }
 }
 
 @layer components {
   .patria-accent-line { position: relative; }
-  .patria-accent-line::after {
-    content: "";
-    display: block;
-    width: 48px;
-    height: 3px;
-    margin-top: 0.75rem;
-    border-radius: 999px;
-    background: hsl(var(--accent));
-  }
-
-  .patria-stripe {
-    height: 4px;
-    background: linear-gradient(to right, hsl(351 72% 43%) 0%, hsl(351 72% 43%) 33.33%, hsl(0 0% 100%) 33.33%, hsl(0 0% 100%) 66.66%, hsl(215 52% 20%) 66.66%, hsl(215 52% 20%) 100%);
-  }
-
-  .patria-checker {
-    background-image: linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%), linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%);
-    background-position: 0 0, 8px 8px;
-    background-size: 16px 16px;
-  }
-
-  .patria-card {
-    background: hsl(var(--card));
-    border: 1px solid hsl(var(--border));
-    border-radius: .5rem;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-  }
-
+  .patria-accent-line::after { content: ""; display: block; width: 48px; height: 3px; margin-top: 0.75rem; border-radius: 999px; background: hsl(var(--accent)); }
+  .patria-stripe { height: 4px; background: linear-gradient(to right, hsl(351 72% 43%) 0%, hsl(351 72% 43%) 33.33%, hsl(0 0% 100%) 33.33%, hsl(0 0% 100%) 66.66%, hsl(215 52% 20%) 66.66%, hsl(215 52% 20%) 100%); }
+  .patria-checker { background-image: linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%), linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%); background-position: 0 0, 8px 8px; background-size: 16px 16px; }
+  .patria-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: .5rem; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
   .patria-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(15,35,60,.08); }
-
-  .patria-button, .patria-button-accent {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: .375rem;
-    padding: .625rem 1.25rem;
-    font-weight: 500;
-  }
-
+  .patria-button, .patria-button-accent { display: inline-flex; align-items: center; justify-content: center; border-radius: .375rem; padding: .625rem 1.25rem; font-weight: 500; }
   .patria-button { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
   .patria-button:hover { transform: translateY(-1px); }
   .patria-button-accent { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
   .patria-button-accent:hover { transform: translateY(-1px); }
-
-  .quiz-answer {
-    width: 100%;
-    text-align: left;
-    border-radius: .375rem;
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--card));
-    padding: 1rem;
-    transition: background-color .18s ease, border-color .18s ease, transform .18s ease;
-  }
-
+  .quiz-answer { width: 100%; text-align: left; border-radius: .375rem; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); padding: 1rem; transition: background-color .18s ease, border-color .18s ease, transform .18s ease; }
   .quiz-answer:hover { transform: translateX(2px); }
   .quiz-answer.correct { background: hsl(145 45% 95%); border-color: hsl(145 45% 42%); }
   .quiz-answer.incorrect { background: hsl(351 55% 96%); border-color: hsl(351 55% 55%); }
+
+  /* Naslovnica: glavni gumb Hrvatskog kviza stoji ispod naslova/opisa, a ne lijevo od njega. */
+  section.border-b .patria-button-accent:first-child { flex-basis: 100%; width: fit-content; }
 }
 
 @media (max-width: 640px) {
