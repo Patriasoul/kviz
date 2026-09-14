@@ -1,9 +1,39 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Flag, Search, Shield } from "lucide-react";
 import { CITY_QUESTIONS } from "../data/cityQuestions";
+import { cityFlagCandidates } from "../data/cityFlags";
 
 const TARGET_QUESTIONS = 75;
-const CITY_IMAGE = `${import.meta.env.BASE_URL}images/brani svoj grad.png`;
+
+function CityFlag({ cityName }) {
+  const candidates = cityFlagCandidates(cityName);
+  const [index, setIndex] = useState(0);
+
+  if (index >= candidates.length) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-red-900 via-white to-blue-950">
+        <div className="rounded-xl bg-black/35 px-5 py-3 text-center text-white backdrop-blur-sm">
+          <Flag className="mx-auto mb-1 h-7 w-7" />
+          <span className="text-sm font-bold">{cityName}</span>
+          <span className="mt-1 block text-[10px] uppercase tracking-wider opacity-80">
+            zastava se provjerava
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={candidates[index]}
+      alt={`Službena zastava grada ${cityName}`}
+      className="h-full w-full object-contain bg-white p-5 transition duration-300 group-hover:scale-[1.03]"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setIndex((current) => current + 1)}
+    />
+  );
+}
 
 export default function BraniSvojGrad({ onBack, onStart }) {
   const [search, setSearch] = useState("");
@@ -31,8 +61,6 @@ export default function BraniSvojGrad({ onBack, onStart }) {
     return [...grouped.values()]
       .map((city) => ({
         ...city,
-        // All canonical PatriaSoul cities are available to play.
-        // The generator is responsible for assembling the complete 75-question bank.
         complete: true,
       }))
       .filter(
@@ -84,19 +112,14 @@ export default function BraniSvojGrad({ onBack, onStart }) {
               onClick={() => onStart(city.slug, city.name)}
               className="patria-card group overflow-hidden text-left transition hover:-translate-y-0.5"
             >
-              <div className="relative h-32 overflow-hidden bg-primary">
-                <img
-                  src={CITY_IMAGE}
-                  alt={`Brani svoj grad — ${city.name}`}
-                  className="h-full w-full object-cover opacity-90 transition duration-300 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                <div className="absolute bottom-3 left-4 flex items-center gap-2 text-white">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-md bg-black/40 backdrop-blur-sm">
+              <div className="relative h-32 overflow-hidden bg-white">
+                <CityFlag cityName={city.name} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                <div className="absolute bottom-3 left-4 flex items-center gap-2 text-white pointer-events-none">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-md bg-black/50 backdrop-blur-sm">
                     <Flag className="h-5 w-5" />
                   </span>
-                  <span className="font-bold">{city.name}</span>
+                  <span className="font-bold drop-shadow">{city.name}</span>
                 </div>
               </div>
 
