@@ -23,6 +23,12 @@ const categories = [
 
 const names = Object.fromEntries(categories.map(([id, title]) => [id, title]));
 
+const quizImages = {
+  daily: "/images/1765535164250.png",
+  city: "/images/brani svoj grad.png",
+  croatian: "/images/hrvatski kviz.png",
+};
+
 export default function App() {
   const [screen, setScreen] = useState("home");
   const [category, setCategory] = useState("sve");
@@ -82,8 +88,11 @@ export default function App() {
       <div className="patria-stripe" />
       <header className="border-b border-border bg-primary text-primary-foreground">
         <div className="patria-checker">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-            <button onClick={home} className="font-display text-2xl font-bold">PATRIA<span className="text-red-300">SOUL</span></button>
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+            <button onClick={home} className="flex items-center gap-3 font-display text-2xl font-bold">
+              <img src="/images/logo Patriasoul.png" alt="PatriaSoul" className="h-11 w-auto object-contain" />
+              <span className="sr-only">PatriaSoul</span>
+            </button>
             <nav className="flex gap-4 text-sm">
               <button onClick={home}>Početna</button>
               <button onClick={startDaily}>Dnevni kviz</button>
@@ -99,16 +108,25 @@ export default function App() {
       {screen === "home" && (
         <main>
           <section className="border-b border-border">
-            <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-              <div className="max-w-3xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[.16em] text-accent"><Flag className="h-4 w-4" /> Znanje · ponos · nasljeđe</div>
-                <h1 className="font-display text-5xl font-bold leading-tight sm:text-6xl">Hrvatski kviz</h1>
-                <p className="mt-5 max-w-2xl text-lg text-muted-foreground">Provjeri svoje znanje o Hrvatskoj — pitanja se uzimaju iz postojeće PatriaSoul baze i svaki se kviz nasumično razvrtava.</p>
-                <div className="mt-8 flex flex-wrap gap-3">
-                  <button onClick={() => start()} className="patria-button-accent">Započni kviz <ArrowRight className="ml-2 h-4 w-4" /></button>
-                  <button onClick={startDaily} className="patria-button"><CalendarDays className="mr-2 h-4 w-4" /> Dnevni kviz</button>
-                  <button onClick={() => setScreen("cities")} className="patria-button">Brani svoj grad</button>
-                  <a href="#kategorije" className="patria-button">Odaberi kategoriju</a>
+            <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+              <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_.95fr]">
+                <div className="max-w-3xl">
+                  <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[.16em] text-accent"><Flag className="h-4 w-4" /> Znanje · ponos · nasljeđe</div>
+                  <h1 className="font-display text-5xl font-bold leading-tight sm:text-6xl">Hrvatski kviz</h1>
+                  <p className="mt-5 max-w-2xl text-lg text-muted-foreground">Provjeri svoje znanje o Hrvatskoj — pitanja se uzimaju iz postojeće PatriaSoul baze i svaki se kviz nasumično razvrtava.</p>
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    <button onClick={() => start()} className="patria-button-accent">Započni kviz <ArrowRight className="ml-2 h-4 w-4" /></button>
+                    <button onClick={startDaily} className="patria-button"><CalendarDays className="mr-2 h-4 w-4" /> Dnevni kviz</button>
+                    <button onClick={() => setScreen("cities")} className="patria-button">Brani svoj grad</button>
+                    <a href="#kategorije" className="patria-button">Odaberi kategoriju</a>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+                  <img src={quizImages.croatian} alt="Hrvatski kviz PatriaSoul" className="h-64 w-full object-cover sm:h-72" />
+                  <div className="border-t border-border p-4">
+                    <p className="text-sm font-bold uppercase tracking-[.14em] text-accent">PatriaSoul · Hrvatski kviz</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Znanje o Hrvatskoj na jednom mjestu.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -116,9 +134,26 @@ export default function App() {
 
           <section className="border-b border-border bg-secondary/30">
             <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-              <div className="patria-card flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
-                <div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">Svaki dan novi izazov</p><h2 className="mt-2 text-2xl">Dnevni kviz</h2><p className="mt-2 text-sm text-muted-foreground">10 pitanja, isti dnevni set za sve igrače i novi izazov svakog dana.</p></div>
-                <button onClick={startDaily} className="patria-button-accent shrink-0">Igraj današnji kviz <ArrowRight className="ml-2 h-4 w-4" /></button>
+              <div className="grid gap-5 md:grid-cols-2">
+                <button onClick={startDaily} className="patria-card group overflow-hidden text-left">
+                  <img src={quizImages.daily} alt="Dnevni kviz" className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                  <div className="p-6">
+                    <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">Svaki dan novi izazov</p>
+                    <h2 className="mt-2 text-2xl">Dnevni kviz</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">10 pitanja, isti dnevni set za sve igrače i novi izazov svakog dana.</p>
+                    <span className="mt-5 inline-flex items-center font-semibold text-accent">Igraj današnji kviz <ArrowRight className="ml-2 h-4 w-4" /></span>
+                  </div>
+                </button>
+
+                <button onClick={() => setScreen("cities")} className="patria-card group overflow-hidden text-left">
+                  <img src={quizImages.city} alt="Brani svoj grad" className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                  <div className="p-6">
+                    <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">75 pitanja po gradu</p>
+                    <h2 className="mt-2 text-2xl">Brani svoj grad</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">Odaberi hrvatski grad i provjeri koliko dobro poznaješ njegovu povijest, baštinu i posebnosti.</p>
+                    <span className="mt-5 inline-flex items-center font-semibold text-accent">Odaberi grad <ArrowRight className="ml-2 h-4 w-4" /></span>
+                  </div>
+                </button>
               </div>
             </div>
           </section>
