@@ -1,6 +1,6 @@
 const COMMONS = "https://commons.wikimedia.org/wiki/Special:FilePath/";
 
-function file(name) {
+function commonsFile(name) {
   return `${COMMONS}${encodeURIComponent(name)}`;
 }
 
@@ -13,19 +13,36 @@ function normalize(value = "") {
     .trim();
 }
 
+/*
+ * The city card must never use the Brani svoj grad hero image as a city flag.
+ * We resolve only real flag media candidates from Wikimedia Commons.  The
+ * component tries candidates in order and shows a neutral verification state
+ * if Commons does not have the expected media file.
+ *
+ * The government currently lists 127 Croatian cities. The question catalog is
+ * the source of the cards; this module is deliberately independent from the
+ * question count so flags can be attached to every city as the catalog grows.
+ */
 export function cityFlagCandidates(cityName) {
   const name = String(cityName || "").trim();
   const plain = normalize(name);
+
+  if (!name) return [];
+
   const candidates = [
     `Flag of ${name}.svg`,
     `Flag of the City of ${name}.svg`,
+    `Flag of ${name}.png`,
     `Zastava ${name}.svg`,
     `Zastava Grada ${name}.svg`,
+    `Zastava ${name}.png`,
     `Flag of ${plain}.svg`,
+    `Flag of ${plain}.png`,
     `Zastava ${plain}.svg`,
+    `Zastava ${plain}.png`,
   ];
 
-  return [...new Set(candidates)].map(file);
+  return [...new Set(candidates)].map(commonsFile);
 }
 
 export function cityFlagSource(cityName) {
@@ -33,19 +50,10 @@ export function cityFlagSource(cityName) {
   return `https://commons.wikimedia.org/wiki/Category:Flags_of_cities_of_Croatia#${encodeURIComponent(name)}`;
 }
 
-export function CityFlag({ cityName, className = "" }) {
-  const candidates = cityFlagCandidates(cityName);
-
-  return {
-    candidates,
-    source: cityFlagSource(cityName),
-    className,
-  };
-}
-
 export const CITY_FLAG_SYSTEM = {
   country: "Hrvatska",
   scope: "gradovi",
   source: "Wikimedia Commons / gradska heraldika",
-  note: "Kandidatne datoteke koriste službene nazive zastava kada su dostupni; pojedinačne zastave treba provjeriti prema službenom gradskom izvoru prije trajnog lokalnog arhiviranja.",
+  sourcePolicy: "Stvarna gradska zastava ima prednost pred fotografijom ili generičkom grafikom. Commons se koristi kao javno dostupno spremište zastava; pojedinačni izvor ostaje provjerljiv kroz gradski naziv i Commons kategoriju.",
+  fallback: "neutral-verification",
 };
