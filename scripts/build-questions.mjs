@@ -30,7 +30,16 @@ async function loadSource(url) {
 function prepareSource(source) {
   // Some legacy PatriaSoul city banks contain unquoted object keys with
   // hyphens (for example nova-gradiska). Quote those keys before evaluation.
-  return source.replace(/([,{]\s*)([A-Za-z_$][\w$-]*-[\w$-]+)\s*:/g, "$1'$2':");
+  let prepared = source.replace(/([,{]\s*)([A-Za-z_$][\w$-]*-[\w$-]+)\s*:/g, "$1'$2':");
+
+  // City layers exist in two legacy data shapes. Normalize the common
+  // answer-array expression so both shapes can be evaluated safely.
+  prepared = prepared.replace(
+    /\.\.\.f\[1\]\[2\]/g,
+    "...(Array.isArray(f[1][2]) ? f[1][2] : f[1][1])",
+  );
+
+  return prepared;
 }
 
 function createContext() {
@@ -84,8 +93,11 @@ for (const url of CITY_SOURCES) {
 
   for (const [key, value] of Object.entries(window)) {
     if (!/^PatriaCityVerified\d*$/.test(key) || !value) continue;
-    if (typeof value.all !== "function") continue;
-    const rows = value.all();
+    const rows = typeof value.all === "function"
+      ? value.all()
+      : typeof value.forCity === "function"
+        ? value.forCity()
+        : [];
     if (Array.isArray(rows)) cityQuestions.push(...rows);
   }
 }
