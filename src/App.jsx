@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Flag, FileText, RotateCcw, ShieldCheck, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, Flag, FileText, RotateCcw, ShieldCheck, Trophy } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
 import BraniSvojGrad from "./pages/BraniSvojGrad";
+import DailyQuiz from "./pages/DailyQuiz";
 import QUESTIONS from "./data/questions";
 import { CITY_QUESTIONS } from "./data/cityQuestions";
 import { pickQuestions, pickCityQuestions } from "./lib/questionEngine";
@@ -28,33 +29,17 @@ export default function App() {
   const [round, setRound] = useState([]);
   const [result, setResult] = useState(null);
   const [city, setCity] = useState(null);
-  const [rulesAccepted, setRulesAccepted] = useState(
-    () => localStorage.getItem("patriasoul_rules_accepted") === "1",
-  );
+  const [rulesAccepted, setRulesAccepted] = useState(() => localStorage.getItem("patriasoul_rules_accepted") === "1");
 
   const start = (cat = "sve") => {
-    if (!rulesAccepted) {
-      setScreen("rules");
-      return;
-    }
+    if (!rulesAccepted) { setScreen("rules"); return; }
     const selected = pickQuestions(QUESTIONS, 10, { category: cat === "sve" ? null : cat });
-    if (!selected.length) {
-      setCategory(cat);
-      setScreen("unavailable");
-      return;
-    }
-    setCategory(cat);
-    setCity(null);
-    setRound(selected);
-    setResult(null);
-    setScreen("quiz");
+    if (!selected.length) { setCategory(cat); setScreen("unavailable"); return; }
+    setCategory(cat); setCity(null); setRound(selected); setResult(null); setScreen("quiz");
   };
 
   const startCity = (citySlug, cityName) => {
-    if (!rulesAccepted) {
-      setScreen("rules");
-      return;
-    }
+    if (!rulesAccepted) { setScreen("rules"); return; }
     const selected = pickCityQuestions(CITY_QUESTIONS, citySlug, 10);
     if (selected.length < 10) {
       setCity({ slug: citySlug, name: cityName, count: selected.length });
@@ -62,10 +47,12 @@ export default function App() {
       return;
     }
     setCity({ slug: citySlug, name: cityName, count: 75 });
-    setCategory("city");
-    setRound(selected);
-    setResult(null);
-    setScreen("city-quiz");
+    setCategory("city"); setRound(selected); setResult(null); setScreen("city-quiz");
+  };
+
+  const startDaily = () => {
+    if (!rulesAccepted) { setScreen("rules"); return; }
+    setCity(null); setCategory("daily"); setResult(null); setScreen("daily");
   };
 
   const acceptRules = () => {
@@ -75,31 +62,19 @@ export default function App() {
   };
 
   const home = () => {
-    setScreen("home");
-    setRound([]);
-    setResult(null);
-    setCity(null);
-    setCategory("sve");
+    setScreen("home"); setRound([]); setResult(null); setCity(null); setCategory("sve");
   };
 
   const cityHome = () => {
-    setScreen("cities");
-    setRound([]);
-    setResult(null);
+    setScreen("cities"); setRound([]); setResult(null);
   };
 
-  const completeQuiz = (quizResult) => {
-    setResult(quizResult);
-    setScreen("result");
-  };
-
-  const completeCityQuiz = (quizResult) => {
-    setResult(quizResult);
-    setScreen("city-result");
-  };
+  const completeQuiz = (quizResult) => { setResult(quizResult); setScreen("result"); };
+  const completeCityQuiz = (quizResult) => { setResult(quizResult); setScreen("city-result"); };
+  const completeDailyQuiz = (quizResult) => { setResult(quizResult); setScreen("daily-result"); };
 
   useEffect(() => {
-    if (screen === "quiz" || screen === "city-quiz") window.scrollTo({ top: 0, behavior: "smooth" });
+    if (["quiz", "city-quiz", "daily"].includes(screen)) window.scrollTo({ top: 0, behavior: "smooth" });
   }, [screen]);
 
   return (
@@ -111,6 +86,7 @@ export default function App() {
             <button onClick={home} className="font-display text-2xl font-bold">PATRIA<span className="text-red-300">SOUL</span></button>
             <nav className="flex gap-4 text-sm">
               <button onClick={home}>Početna</button>
+              <button onClick={startDaily}>Dnevni kviz</button>
               <button onClick={() => setScreen("cities")}>Brani svoj grad</button>
               <button onClick={() => setScreen("rules")} className="flex items-center gap-1"><FileText className="h-4 w-4" /> Pravilnik</button>
             </nav>
@@ -130,9 +106,19 @@ export default function App() {
                 <p className="mt-5 max-w-2xl text-lg text-muted-foreground">Provjeri svoje znanje o Hrvatskoj — pitanja se uzimaju iz postojeće PatriaSoul baze i svaki se kviz nasumično razvrtava.</p>
                 <div className="mt-8 flex flex-wrap gap-3">
                   <button onClick={() => start()} className="patria-button-accent">Započni kviz <ArrowRight className="ml-2 h-4 w-4" /></button>
+                  <button onClick={startDaily} className="patria-button"><CalendarDays className="mr-2 h-4 w-4" /> Dnevni kviz</button>
                   <button onClick={() => setScreen("cities")} className="patria-button">Brani svoj grad</button>
                   <a href="#kategorije" className="patria-button">Odaberi kategoriju</a>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="border-b border-border bg-secondary/30">
+            <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+              <div className="patria-card flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">Svaki dan novi izazov</p><h2 className="mt-2 text-2xl">Dnevni kviz</h2><p className="mt-2 text-sm text-muted-foreground">10 pitanja, isti dnevni set za sve igrače i novi izazov svakog dana.</p></div>
+                <button onClick={startDaily} className="patria-button-accent shrink-0">Igraj današnji kviz <ArrowRight className="ml-2 h-4 w-4" /></button>
               </div>
             </div>
           </section>
@@ -167,20 +153,17 @@ export default function App() {
       )}
 
       {screen === "cities" && <BraniSvojGrad onBack={home} onStart={startCity} />}
+      {screen === "daily" && <DailyQuiz onBack={home} onComplete={completeDailyQuiz} />}
 
-      {(screen === "quiz" || screen === "city-quiz") && (
-        <QuizPlayer
-          questions={round}
-          title={screen === "city-quiz" ? `Brani svoj grad: ${city?.name || "Grad"}` : "PatriaSoul Hrvatski kviz"}
-          subtitle={screen === "city-quiz" ? "10 pitanja iz baze od 75" : category === "sve" ? "Kombinirani kviz" : names[category]}
-          timeLimit={screen === "city-quiz" ? 15 : 20}
-          onComplete={screen === "city-quiz" ? completeCityQuiz : completeQuiz}
-          onQuit={screen === "city-quiz" ? cityHome : home}
-        />
-      )}
+      {screen === "quiz" && <QuizPlayer questions={round} title="PatriaSoul Hrvatski kviz" subtitle={category === "sve" ? "Kombinirani kviz" : names[category]} timeLimit={20} onComplete={completeQuiz} onQuit={home} />}
+      {screen === "city-quiz" && <QuizPlayer questions={round} title={`Brani svoj grad: ${city?.name || "Grad"}`} subtitle="10 pitanja iz baze od 75" timeLimit={15} onComplete={completeCityQuiz} onQuit={cityHome} />}
 
       {screen === "result" && result && (
         <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Bravo na sudjelovanju.</p><p className="mt-2 text-muted-foreground">Pitanja su uzeta iz postojeće PatriaSoul baze.</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button onClick={() => start(category)} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Igraj ponovno</button><button onClick={home} className="patria-button">Natrag na početak</button></div></div></div></main>
+      )}
+
+      {screen === "daily-result" && result && (
+        <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><CalendarDays className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Dnevni rezultat</p><h1 className="mt-2 font-display text-4xl font-bold">Dnevni kviz</h1><p className="mt-4 text-5xl font-bold">{result.score} / {result.total}</p><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">Današnji izazov je završen.</p><p className="mt-2 text-muted-foreground">Današnji set ostaje isti do promjene datuma.</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button onClick={startDaily} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Ponovi današnji kviz</button><button onClick={home} className="patria-button">Natrag na početak</button></div></div></div></main>
       )}
 
       {screen === "city-result" && result && city && (
