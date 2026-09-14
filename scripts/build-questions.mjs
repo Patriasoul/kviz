@@ -28,17 +28,11 @@ async function loadSource(url) {
 }
 
 function prepareSource(source) {
-  // Some legacy PatriaSoul city banks contain unquoted object keys with
-  // hyphens (for example nova-gradiska). Quote those keys before evaluation.
   let prepared = source.replace(/([,{]\s*)([A-Za-z_$][\w$-]*-[\w$-]+)\s*:/g, "$1'$2':");
-
-  // City layers exist in two legacy data shapes. Normalize the common
-  // answer-array expression so both shapes can be evaluated safely.
   prepared = prepared.replace(
     /\.\.\.f\[1\]\[2\]/g,
     "...(Array.isArray(f[1][2]) ? f[1][2] : f[1][1])",
   );
-
   return prepared;
 }
 
@@ -87,18 +81,23 @@ for (const q of questions) {
 const finalQuestions = [...unique.values()];
 
 const cityQuestions = [];
+const skippedCitySources = [];
 for (const url of CITY_SOURCES) {
-  const source = prepareSource(await loadSource(url));
-  vm.runInContext(source, context, { filename: url });
+  try {
+    const source = prepareSource(await loadSource(url));
+    vm.runInContext(source, context, { filename: url });
 
-  for (const [key, value] of Object.entries(window)) {
-    if (!/^PatriaCityVerified\d*$/.test(key) || !value) continue;
-    const rows = typeof value.all === "function"
-      ? value.all()
-      : typeof value.forCity === "function"
-        ? value.forCity()
-        : [];
-    if (Array.isArray(rows)) cityQuestions.push(...rows);
+    for (const [key, value] of Object.entries(window)) {
+      if (!/^PatriaCityVerified\d*$/.test(key) || !value) continue;
+      const rows = typeof value.all === "function"
+        ? value.all()
+        : typeof value.forCity === "function"
+          ? value.forCity()
+          : [];
+      if (Array.isArray(rows)) cityQuestions.push(...rows);
+    }
+  } catch (error) {
+    skippedCitySources.push({ url, message: error instanceof Error ? error.message : String(error) });
   }
 }
 
@@ -148,5 +147,9 @@ for (const q of finalCityQuestions) cityCounts[q.cityId] = (cityCounts[q.cityId]
 console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
 console.log(`Brani svoj grad pitanja: ${finalCityQuestions.length}`);
 console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
+if (skippedCitySources.length) {
+  console.warn(`Preskočeno neispravnih city layera: ${skippedCitySources.length}`);
+  for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
+}
 console.log(`Generirano: ${output}`);
 console.log(`Generirano: ${cityOutput}`);
