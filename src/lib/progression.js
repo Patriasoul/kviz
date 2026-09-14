@@ -47,6 +47,9 @@ export const ACHIEVEMENTS = {
     ["daily_100", "100 dana", "Niz od 100 dana"],
     ["daily_365", "365 dana", "Godina kontinuiteta"],
   ],
+  patria: [
+    ["patria_guardian", "PATRIA SOUL — ČUVAR NASLJEĐA", "Level 50 u sva tri kviza"],
+  ],
 };
 
 export const XP_RULES = {
