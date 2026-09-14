@@ -28,6 +28,20 @@ export async function saveQuizResult({
   return { data, error };
 }
 
+export async function saveQuizProgress({ quizType, score, total, timeSeconds = null, xp }) {
+  if (!supabase) return { data: null, error: new Error("Supabase nije konfiguriran.") };
+
+  const { data, error } = await supabase.rpc("record_quiz_progress", {
+    p_quiz_type: quizType,
+    p_score: score,
+    p_total: total,
+    p_time_seconds: timeSeconds,
+    p_xp: xp,
+  });
+
+  return { data, error };
+}
+
 export async function fetchLeaderboard(quizType = null, limit = 50) {
   if (!supabase) return { data: [], error: new Error("Supabase nije konfiguriran.") };
 
@@ -41,5 +55,25 @@ export async function fetchLeaderboard(quizType = null, limit = 50) {
   if (quizType) query = query.eq("quiz_type", quizType);
 
   const { data, error } = await query;
+  return { data: data ?? [], error };
+}
+
+export async function fetchProgress(userId) {
+  if (!supabase || !userId) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from("player_progress")
+    .select("*")
+    .eq("user_id", userId)
+    .order("quiz_type");
+  return { data: data ?? [], error };
+}
+
+export async function fetchBadges(userId) {
+  if (!supabase || !userId) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from("player_badges")
+    .select("*")
+    .eq("user_id", userId)
+    .order("earned_at", { ascending: false });
   return { data: data ?? [], error };
 }
