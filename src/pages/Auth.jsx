@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, LogIn, UserPlus } from "lucide-react";
 import { supabase } from "../supabase";
 
-export default function Auth({ onBack }) {
+export default function Auth({ onBack, onAuthenticated }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -10,6 +10,18 @@ export default function Auth({ onBack }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!supabase || !onAuthenticated) return undefined;
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
+        onAuthenticated();
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, [onAuthenticated]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -29,13 +41,23 @@ export default function Auth({ onBack }) {
         password,
         options: { data: { display_name: displayName.trim() || undefined } },
       });
-      if (signUpError) setError(signUpError.message);
-      else if (!data.session) setMessage("Registracija je uspješna. Provjeri e-mail i potvrdi račun prije prijave.");
-      else setMessage("Račun je kreiran i prijavljeni ste.");
+
+      if (signUpError) {
+        setError(signUpError.message);
+      } else if (!data.session) {
+        setMessage("Registracija je uspješna. Provjeri e-mail i potvrdi račun prije prijave.");
+      } else {
+        setMessage("Račun je kreiran i prijavljeni ste.");
+        onAuthenticated?.();
+      }
     } else {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) setError(signInError.message);
-      else setMessage("Prijava uspješna.");
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError(signInError.message);
+      } else {
+        setMessage("Prijava uspješna.");
+        if (data.session) onAuthenticated?.();
+      }
     }
 
     setBusy(false);
