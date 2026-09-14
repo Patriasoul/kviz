@@ -13,6 +13,8 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
   const scoreRef = useRef(0);
   const q = questions[index];
   const progress = questions.length ? ((index + 1) / questions.length) * 100 : 0;
+  const answerOptions = Array.isArray(q?.options) ? q.options.map((option) => option.text) : q?.answers ?? [];
+  const correctOptionIndex = Number.isInteger(q?.preparedCorrectIndex) ? q.preparedCorrectIndex : q?.correctIndex;
 
   useEffect(() => {
     if (!questions.length || answered) return undefined;
@@ -44,7 +46,7 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
     if (answered || !q) return;
     setSelected(i);
     setAnswered(true);
-    if (i === q.correctIndex) scoreRef.current += 1;
+    if (i === correctOptionIndex) scoreRef.current += 1;
   };
 
   if (!q) {
@@ -63,15 +65,15 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
           <motion.div key={q.id ?? index} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.3 }}>
             <h2 className="mb-6 min-h-[3.5rem] font-display text-xl font-semibold leading-snug sm:text-2xl">{q.question}</h2>
             <div className="grid gap-3">
-              {q.answers.map((ans, i) => {
-                const isCorrect = i === q.correctIndex;
+              {answerOptions.map((ans, i) => {
+                const isCorrect = i === correctOptionIndex;
                 const isSelected = i === selected;
                 let cls = "border-white/15 bg-white/5 hover:border-white/30 hover:bg-white/10";
                 if (answered) cls = isCorrect ? "border-green-400 bg-green-400/15 text-white" : isSelected ? "border-red-500 bg-red-500/15 text-white" : "border-white/10 bg-white/5 opacity-50";
                 return <button key={`${q.id}-${i}`} onClick={() => handleAnswer(i)} disabled={answered} className={`flex w-full items-center gap-3 rounded-xl border-2 px-4 py-4 text-left transition-all ${cls} ${!answered ? "active:scale-[0.99]" : ""}`}><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold">{LETTERS[i]}</span><span className="flex-1 font-medium">{ans}</span>{answered && isCorrect && <Check className="h-5 w-5 text-green-400" />}{answered && isSelected && !isCorrect && <X className="h-5 w-5 text-red-400" />}</button>;
               })}
             </div>
-            {answered && <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">{selected === -1 ? "Vrijeme je isteklo. Odgovor se smatra netočnim." : selected === q.correctIndex ? "Točan odgovor!" : "Netočan odgovor. Točan odgovor je označen."}</div>}
+            {answered && <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">{selected === -1 ? "Vrijeme je isteklo. Odgovor se smatra netočnim." : selected === correctOptionIndex ? "Točan odgovor!" : "Netočan odgovor. Točan odgovor je označen."}</div>}
           </motion.div>
         </AnimatePresence>
         {onQuit && <button onClick={onQuit} className="mt-8 text-sm text-white/40 transition-colors hover:text-white/70">Odustani</button>}
