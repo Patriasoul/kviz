@@ -122,7 +122,9 @@ for (const q of cityQuestions) {
     normalized.correctIndex >= 0 &&
     normalized.correctIndex <= 3
   ) {
-    uniqueCities.set(normalized.id, normalized);
+    // Question IDs are only unique inside a city layer. Use cityId + id
+    // so identical local IDs from different cities are never discarded.
+    uniqueCities.set(`${normalized.cityId}::${normalized.id}`, normalized);
   }
 }
 
