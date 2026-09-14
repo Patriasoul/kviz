@@ -51,6 +51,7 @@ declare
   uid uuid := auth.uid();
   old_xp integer := 0;
   new_xp integer;
+  xp_earned integer;
   old_level integer := 1;
   new_level integer;
   pct numeric(5,2);
@@ -59,16 +60,16 @@ declare
   streak integer := 0;
   best_streak integer := 0;
   last_date date;
-  today date := current_date;
+  today date := timezone('Europe/Zagreb', now())::date;
   badge_record record;
   badge_name text;
-  unlocked json := '[]'::json;
-  city_count integer := 0;
-  high_score_count integer := 0;
-  perfect_count integer := 0;
   total_correct integer := 0;
+  perfect_count integer := 0;
+  high_score_count integer := 0;
   daily_count integer := 0;
-  city_total integer := 0;
+  city_count integer := 0;
+  all_quiz_types integer := 0;
+  min_quiz_level integer := 0;
 begin
   if uid is null then raise exception 'Prijava je potrebna za napredovanje'; end if;
   if p_quiz_type not in ('croatian','city','daily') then raise exception 'Nepoznata vrsta kviza'; end if;
@@ -82,17 +83,37 @@ begin
   where user_id = uid and quiz_type = p_quiz_type;
 
   if not found then
-    old_xp := 0; old_level := 1; played := 0; best_pct := 0; streak := 0; best_streak := 0; last_date := null;
+    old_xp := 0;
+    old_level := 1;
+    played := 0;
+    best_pct := 0;
+    streak := 0;
+    best_streak := 0;
+    last_date := null;
   end if;
 
   if p_quiz_type = 'daily' then
-    if last_date = today - 1 then streak := streak + 1;
-    elsif last_date = today then streak := greatest(streak, 1);
-    else streak := 1;
+    if last_date = today - 1 then
+      streak := streak + 1;
+    elsif last_date = today then
+      streak := greatest(streak, 1);
+    else
+      streak := 1;
     end if;
+  else
+    streak := 0;
   end if;
 
-  new_xp := old_xp + greatest(p_xp, 0);
+  xp_earned := greatest(p_xp, 0);
+
+  -- Streak XP is granted exactly when the milestone is reached.
+  if p_quiz_type = 'daily' and streak = 7 then
+    xp_earned := xp_earned + 100;
+  elsif p_quiz_type = 'daily' and streak = 30 then
+    xp_earned := xp_earned + 500;
+  end if;
+
+  new_xp := old_xp + xp_earned;
   new_level := greatest(1, floor(new_xp / 100) + 1);
   played := played + 1;
   best_pct := greatest(best_pct, pct);
@@ -110,6 +131,7 @@ begin
     last_played_date = excluded.last_played_date,
     updated_at = now();
 
+  -- Main level badges.
   for badge_record in
     select * from (values
       ('1',1),('10',10),('20',20),('30',30),('40',40),('50',50),('60',60),('70',70),('80',80),('90',90)
@@ -136,48 +158,137 @@ begin
     on conflict (user_id, badge_id) do nothing;
   end loop;
 
-  select count(*) into total_correct from public.quiz_results where user_id = uid and quiz_type = 'croatian';
-  select count(*) into perfect_count from public.quiz_results where user_id = uid and quiz_type = 'croatian' and percentage = 100;
-  select count(*) into high_score_count from public.quiz_results where user_id = uid and quiz_type = 'croatian' and percentage >= 90;
-  select count(*) into daily_count from public.quiz_results where user_id = uid and quiz_type = 'daily';
-  select count(distinct city_slug) into city_count from public.quiz_results where user_id = uid and quiz_type = 'city' and city_slug is not null;
+  -- Special achievements are calculated from real saved quiz results.
+  select coalesce(sum(score), 0)
+    into total_correct
+  from public.quiz_results
+  where user_id = uid and quiz_type = 'croatian';
+
+  select count(*)
+    into perfect_count
+  from public.quiz_results
+  where user_id = uid and quiz_type = 'croatian' and percentage = 100;
+
+  select count(*)
+    into high_score_count
+  from public.quiz_results
+  where user_id = uid and quiz_type = 'croatian' and percentage >= 90;
+
+  select count(*)
+    into daily_count
+  from public.quiz_results
+  where user_id = uid and quiz_type = 'daily';
+
+  select count(distinct city_slug)
+    into city_count
+  from public.quiz_results
+  where user_id = uid and quiz_type = 'city' and city_slug is not null;
 
   if p_quiz_type = 'croatian' then
-    if (select coalesce(sum(score),0) from public.quiz_results where user_id = uid and quiz_type = 'croatian') >= 10 then
-      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'croatian','croatian_first_10','Prvih 10') on conflict do nothing;
+    if total_correct >= 10 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'croatian','croatian_first_10','Prvih 10') on conflict do nothing;
     end if;
+
     if perfect_count >= 1 then
-      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'croatian','croatian_perfect','Bez pogreške') on conflict do nothing;
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'croatian','croatian_perfect','Bez pogreške') on conflict do nothing;
     end if;
-    if total_correct >= 100 then
-      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'croatian','croatian_100_quizzes','Učenik baštine') on conflict do nothing;
+
+    if played >= 100 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'croatian','croatian_100_quizzes','Učenik baštine') on conflict do nothing;
     end if;
+
     if high_score_count >= 50 then
-      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'croatian','croatian_90_50','Poznavatelj Domovine') on conflict do nothing;
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'croatian','croatian_90_50','Poznavatelj Domovine') on conflict do nothing;
     end if;
+
     if perfect_count >= 10 then
-      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'croatian','croatian_perfect_10','Majstor Hrvatske') on conflict do nothing;
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'croatian','croatian_perfect_10','Majstor Hrvatske') on conflict do nothing;
     end if;
   end if;
 
   if p_quiz_type = 'city' then
-    if city_count >= 1 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'city','city_first','Prvi grad') on conflict do nothing; end if;
-    if city_count >= 3 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'city','city_3','Tri grada') on conflict do nothing; end if;
-    if city_count >= 10 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'city','city_10','Deset gradova') on conflict do nothing; end if;
-    if city_count >= 25 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'city','city_25','Čuvar hrvatskih gradova') on conflict do nothing; end if;
-    select count(distinct city_slug) into city_total from public.quiz_results where quiz_type = 'city' and city_slug is not null;
-    if city_total > 0 and city_count >= city_total then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'city','city_all','Branitelj Hrvatske') on conflict do nothing; end if;
+    if city_count >= 1 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'city','city_first','Prvi grad') on conflict do nothing;
+    end if;
+
+    if city_count >= 3 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'city','city_3','Tri grada') on conflict do nothing;
+    end if;
+
+    if city_count >= 10 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'city','city_10','Deset gradova') on conflict do nothing;
+    end if;
+
+    if city_count >= 25 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'city','city_25','Čuvar hrvatskih gradova') on conflict do nothing;
+    end if;
+
+    -- "Branitelj Hrvatske" is intentionally not auto-awarded until the app has
+    -- a single authoritative city catalogue. Counting cities from quiz_results
+    -- alone could falsely declare that every available city was completed.
   end if;
 
   if p_quiz_type = 'daily' then
-    if daily_count >= 1 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'daily','daily_first','Prvi dan') on conflict do nothing; end if;
-    if best_streak >= 7 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'daily','daily_7','7 dana') on conflict do nothing; end if;
-    if best_streak >= 30 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'daily','daily_30','30 dana') on conflict do nothing; end if;
-    if best_streak >= 100 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'daily','daily_100','100 dana') on conflict do nothing; end if;
-    if best_streak >= 365 then insert into public.player_badges(user_id, quiz_type, badge_id, badge_name) values(uid,'daily','daily_365','365 dana') on conflict do nothing; end if;
+    if daily_count >= 1 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'daily','daily_first','Prvi dan') on conflict do nothing;
+    end if;
+
+    if best_streak >= 7 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'daily','daily_7','7 dana') on conflict do nothing;
+    end if;
+
+    if best_streak >= 30 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'daily','daily_30','30 dana') on conflict do nothing;
+    end if;
+
+    if best_streak >= 100 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'daily','daily_100','100 dana') on conflict do nothing;
+    end if;
+
+    if best_streak >= 365 then
+      insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+      values(uid,'daily','daily_365','365 dana') on conflict do nothing;
+    end if;
   end if;
 
-  return json_build_object('quiz_type', p_quiz_type, 'xp_earned', greatest(p_xp,0), 'xp', new_xp, 'level', new_level, 'previous_level', old_level, 'quizzes_played', played, 'best_percentage', best_pct, 'current_streak', streak, 'best_streak', best_streak);
+  -- Final PatriaSoul achievement: the player has reached Level 50 in all
+  -- three quiz systems. The badge is global but stored in the Croatian group
+  -- so it remains compatible with the existing three-type badge schema.
+  select count(*), coalesce(min(level), 0)
+    into all_quiz_types, min_quiz_level
+  from public.player_progress
+  where user_id = uid and quiz_type in ('croatian', 'city', 'daily');
+
+  if all_quiz_types = 3 and min_quiz_level >= 50 then
+    insert into public.player_badges(user_id, quiz_type, badge_id, badge_name)
+    values(uid,'croatian','patria_guardian','PATRIA SOUL — ČUVAR NASLJEĐA')
+    on conflict (user_id, badge_id) do nothing;
+  end if;
+
+  return json_build_object(
+    'quiz_type', p_quiz_type,
+    'xp_earned', xp_earned,
+    'xp', new_xp,
+    'level', new_level,
+    'previous_level', old_level,
+    'quizzes_played', played,
+    'best_percentage', best_pct,
+    'current_streak', streak,
+    'best_streak', best_streak
+  );
 end;
 $$;
 
