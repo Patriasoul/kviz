@@ -8,7 +8,6 @@ const SOURCES = [
   `${MAIN_REPO}/question_banks_1200.js`,
   `${MAIN_REPO}/bastina.js`,
 ];
-
 const CITY_REGISTRY_SOURCE = `${MAIN_REPO}/gradovi.js`;
 const CITY_SOURCES = [
   `${MAIN_REPO}/patriasoul-city-questions-verified.js`,
@@ -17,21 +16,14 @@ const CITY_SOURCES = [
     .map((id) => `${MAIN_REPO}/patriasoul-city-questions-verified-${id}.js`),
 ];
 
-// Audited canonical layer plans. These are source-selection rules only:
-// the original verified questions are not rewritten, truncated, or fabricated.
-// Omiš is intentionally composed from layers 29 + 34 = 20 + 55 = 75.
-// Sinj, Šibenik and Trilj each have a dedicated canonical 75-question layer.
-const CANONICAL_CITY_LAYER_PLAN = {
-  omis: ["PatriaCityVerified29", "PatriaCityVerified34"],
-  sinj: ["PatriaCityVerified30"],
-  sibenik: ["PatriaCityVerified32"],
-  trilj: ["PatriaCityVerified38"],
-};
-
 const root = process.cwd();
 const dataDir = path.join(root, "src", "data");
 const output = path.join(dataDir, "questions.generated.js");
 const cityOutput = path.join(dataDir, "cityQuestions.generated.js");
+const auditOutput = path.join(dataDir, "cityQuestions.audit.json");
+const TARGET_PER_CITY = 75;
+const TARGET_CITIES = 127;
+const TARGET_TOTAL = TARGET_CITIES * TARGET_PER_CITY;
 
 async function loadSource(url) {
   const response = await fetch(url);
@@ -53,7 +45,6 @@ function createContext() {
 }
 
 const { window: mainWindow, context: mainContext } = createContext();
-
 for (const url of SOURCES) {
   const source = prepareSource(await loadSource(url));
   vm.runInContext(source, mainContext, { filename: url });
@@ -79,10 +70,7 @@ const finalQuestions = [...unique.values()];
 const registrySource = prepareSource(await loadSource(CITY_REGISTRY_SOURCE));
 vm.runInContext(registrySource, mainContext, { filename: CITY_REGISTRY_SOURCE });
 const cityRegistry = Array.isArray(mainWindow.PATRIA_CITY_DATA) ? mainWindow.PATRIA_CITY_DATA : [];
-const registrySlugs = new Set(cityRegistry.map((city) => String(city.slug)));
 
-// Load every verified source independently. Historical layers use different
-// forCity conventions, so query both the canonical slug and display name.
 const cityCandidates = new Map();
 const skippedCitySources = [];
 
@@ -91,7 +79,6 @@ for (const url of CITY_SOURCES) {
     const { window, context } = createContext();
     const source = prepareSource(await loadSource(url));
     vm.runInContext(source, context, { filename: url });
-
     const layers = new Map(Object.entries(window).filter(([key]) => /^PatriaCityVerified\d*$/.test(key)));
     for (const [layerKey, layer] of layers) {
       if (!layer || typeof layer.forCity !== "function") continue;
@@ -117,116 +104,121 @@ for (const url of CITY_SOURCES) {
   }
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .toLocaleLowerCase("hr-HR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function questionSignature(row) {
   return JSON.stringify([
-    String(row.question || "").trim().toLocaleLowerCase("hr-HR"),
-    Array.isArray(row.answers) ? row.answers.map((answer) => String(answer).trim()) : [],
+    normalizeText(row.question),
+    Array.isArray(row.answers) ? row.answers.map(normalizeText) : [],
     Number(row.correctIndex),
   ]);
 }
 
-function candidateSignature(candidate) {
-  return JSON.stringify(candidate.rows.map(questionSignature).sort());
+function questionTextSignature(row) {
+  return normalizeText(row.question);
 }
 
-const finalCityQuestions = [];
-const selectedCityLayers = new Map();
-const missingCanonicalCities = [];
-const duplicateCompleteLayers = [];
+function assembleCity(city, candidates) {
+  const byId = new Map();
+  const byText = new Map();
+  const provenance = new Map();
 
+  // First pass: every verified question is retained. Same ID is one question;
+  // same question text with equivalent answers is also one question.
+  for (const candidate of candidates) {
+    for (const row of candidate.rows) {
+      const id = String(row.id);
+      const signature = questionSignature(row);
+      const textSignature = questionTextSignature(row);
+      const existingById = byId.get(id);
+      if (existingById) {
+        provenance.get(id)?.push(candidate.layerKey);
+        continue;
+      }
+      const duplicateId = [...byId.entries()].find(([, existing]) => questionSignature(existing) === signature)?.[0];
+      if (duplicateId) {
+        provenance.get(duplicateId)?.push(candidate.layerKey);
+        continue;
+      }
+      // A question with the same wording but different answer data is NOT
+      // silently discarded. It remains a distinct candidate for manual audit.
+      byId.set(id, row);
+      provenance.set(id, [candidate.layerKey]);
+      if (!byText.has(textSignature)) byText.set(textSignature, []);
+      byText.get(textSignature).push(id);
+    }
+  }
+
+  const all = [...byId.values()];
+  const exactDuplicates = all.filter((row) => (provenance.get(String(row.id)) || []).length > 1);
+  const textCollisions = [...byText.entries()]
+    .filter(([, ids]) => ids.length > 1)
+    .map(([text, ids]) => ({ text, ids, questions: ids.map((id) => byId.get(id)) }));
+
+  // If the assembled verified pool is already exactly 75, use it untouched.
+  // If it is below/above 75, fail with a complete audit instead of silently
+  // choosing arbitrary questions. This protects the source bank from loss.
+  return {
+    city: { slug: city.slug, name: city.name },
+    count: all.length,
+    questions: all,
+    exactDuplicates: exactDuplicates.map((row) => ({ id: row.id, layers: provenance.get(String(row.id)) })),
+    textCollisions,
+    layers: candidates.map((candidate) => ({ layer: candidate.layerKey, count: candidate.rows.length, url: candidate.url })),
+  };
+}
+
+const audit = [];
 for (const city of cityRegistry) {
-  const allCandidates = cityCandidates.get(city.slug) || [];
-  const plannedLayers = CANONICAL_CITY_LAYER_PLAN[city.slug];
-  const candidates = plannedLayers
-    ? allCandidates.filter((candidate) => plannedLayers.includes(candidate.layerKey))
-    : allCandidates;
-
-  let rows = [];
-  let selected = [];
-
-  if (plannedLayers) {
-    // Explicitly audited cities use only their documented canonical layer plan.
-    // Deduplicate by question ID while preserving every original question.
-    const uniqueRows = new Map();
-    for (const layerKey of plannedLayers) {
-      const candidate = candidates.find((item) => item.layerKey === layerKey);
-      if (!candidate) continue;
-      for (const row of candidate.rows) {
-        const id = String(row.id);
-        if (!uniqueRows.has(id)) uniqueRows.set(id, row);
-      }
-      selected.push(candidate);
-    }
-    rows = [...uniqueRows.values()];
-  } else {
-    const completeCandidates = candidates.filter((candidate) => candidate.rows.length === 75);
-
-    if (completeCandidates.length) {
-      // The earliest complete layer is the canonical set for this generator.
-      // Later complete sets are retained in the source repository but are not
-      // merged, because doing so would create >75 questions for the same city.
-      selected = [completeCandidates[0]];
-      rows = completeCandidates[0].rows;
-      if (completeCandidates.length > 1) {
-        const firstSignature = candidateSignature(completeCandidates[0]);
-        const laterSignatures = new Set(completeCandidates.slice(1).map(candidateSignature));
-        duplicateCompleteLayers.push(`${city.slug}=${completeCandidates.map((candidate) => candidate.layerKey).join(",")}${laterSignatures.has(firstSignature) ? " (identične)" : " (različite)"}`);
-      }
-    } else {
-      const uniqueRows = new Map();
-      for (const candidate of candidates) {
-        for (const row of candidate.rows) {
-          const id = String(row.id);
-          if (!uniqueRows.has(id)) uniqueRows.set(id, row);
-        }
-      }
-      rows = [...uniqueRows.values()];
-      selected = candidates;
-    }
-  }
-
-  if (rows.length !== 75) {
-    missingCanonicalCities.push(`${city.slug}=${rows.length}${candidates.length ? `/${candidates.map((candidate) => candidate.rows.length).join("/")}` : ""}`);
-    continue;
-  }
-
-  selectedCityLayers.set(city.slug, selected.map((candidate) => candidate.layerKey).join(","));
-  finalCityQuestions.push(...rows);
+  audit.push(assembleCity(city, cityCandidates.get(city.slug) || []));
 }
 
-const cityCounts = {};
-for (const q of finalCityQuestions) cityCounts[q.cityId] = (cityCounts[q.cityId] || 0) + 1;
-const completeCities = Object.entries(cityCounts).filter(([, count]) => count === 75);
-const incompleteCities = Object.entries(cityCounts).filter(([, count]) => count < 75);
-const oversizedCities = Object.entries(cityCounts).filter(([, count]) => count > 75);
-const nonCanonicalCities = Object.keys(cityCounts).filter((slug) => !registrySlugs.has(slug));
+const completeAudits = audit.filter((entry) => entry.count === TARGET_PER_CITY);
+const incompleteAudits = audit.filter((entry) => entry.count < TARGET_PER_CITY);
+const oversizedAudits = audit.filter((entry) => entry.count > TARGET_PER_CITY);
 
 console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
-console.log(`Brani svoj grad pitanja: ${finalCityQuestions.length}`);
 console.log(`Gradova u registru: ${cityRegistry.length}`);
-console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
-console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
-console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
-console.log(`Gradova s vise od 75 pitanja: ${oversizedCities.length}`);
-if (CANONICAL_CITY_LAYER_PLAN) console.log(`AUDITIRANI KANONSKI PLANOVI: ${Object.entries(CANONICAL_CITY_LAYER_PLAN).map(([city, layers]) => `${city}=${layers.join("+")}`).join(", ")}`);
-if (selectedCityLayers.size) console.log(`ODABRANI SLOJEVI: ${[...selectedCityLayers.entries()].filter(([city]) => CANONICAL_CITY_LAYER_PLAN[city]).map(([city, layers]) => `${city}=${layers}`).join(", ")}`);
-if (duplicateCompleteLayers.length) console.log(`DUPLI KOMPLETNI SLOJEVI: ${duplicateCompleteLayers.join(", ")}`);
-if (missingCanonicalCities.length) console.log(`NEMA KOMPLETNOG SLOJA: ${missingCanonicalCities.join(", ")}`);
-if (nonCanonicalCities.length) console.log(`NEKANONSKI GRADOVI: ${nonCanonicalCities.join(", ")}`);
-if (incompleteCities.length) console.log(`NEDOSTAJU: ${incompleteCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
-if (oversizedCities.length) console.log(`VIŠAK: ${oversizedCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
+console.log(`Gradova s tocno 75 nakon deduplikacije: ${completeAudits.length}`);
+console.log(`Gradova ispod 75: ${incompleteAudits.length}`);
+console.log(`Gradova iznad 75: ${oversizedAudits.length}`);
+if (incompleteAudits.length) console.log(`ISPOD: ${incompleteAudits.map((x) => `${x.city.slug}=${x.count}`).join(", ")}`);
+if (oversizedAudits.length) console.log(`IZNAD: ${oversizedAudits.map((x) => `${x.city.slug}=${x.count}`).join(", ")}`);
 
-if (skippedCitySources.length) {
-  console.warn(`Preskoceno neispravnih city layera: ${skippedCitySources.length}`);
-  for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
-}
-
-if (cityRegistry.length !== 127 || skippedCitySources.length || missingCanonicalCities.length || nonCanonicalCities.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
-  throw new Error(`City audit nije prosao: ocekivano 127 gradova i 9525 pitanja (75 po gradu), dobiveno ${Object.keys(cityCounts).length} gradova i ${finalCityQuestions.length} pitanja.`);
+for (const entry of audit.filter((x) => x.city.slug === "omis" || x.city.slug === "sinj" || x.city.slug === "sibenik" || x.city.slug === "trilj")) {
+  console.log(`AUDIT ${entry.city.name}: ${entry.count}/75; slojevi=${entry.layers.map((x) => `${x.layer}:${x.count}`).join(",")}; istiID=${entry.exactDuplicates.length}; tekstualniSukobi=${entry.textCollisions.length}`);
 }
 
 await fs.mkdir(dataDir, { recursive: true });
+await fs.writeFile(auditOutput, JSON.stringify({
+  targetCities: TARGET_CITIES,
+  targetPerCity: TARGET_PER_CITY,
+  targetTotal: TARGET_TOTAL,
+  generatedAt: new Date().toISOString(),
+  skippedCitySources,
+  cities: audit,
+}, null, 2), "utf8");
+
+// Never generate a partial city bank. The build stops until every city has an
+// auditable 75-question canonical set. Existing source questions are untouched.
+if (cityRegistry.length !== TARGET_CITIES || skippedCitySources.length || completeAudits.length !== TARGET_CITIES || incompleteAudits.length || oversizedAudits.length) {
+  throw new Error(`City audit nije zavrsen: ${completeAudits.length}/${TARGET_CITIES} gradova ima tocno 75 nakon deduplikacije. Detaljan audit: ${auditOutput}`);
+}
+
+const finalCityQuestions = audit.flatMap((entry) => entry.questions);
+if (finalCityQuestions.length !== TARGET_TOTAL) {
+  throw new Error(`City audit nije zavrsen: ocekivano ${TARGET_TOTAL}, dobiveno ${finalCityQuestions.length}.`);
+}
+
 await fs.writeFile(output, `// GENERATED FILE. Source: PatriaSoul/patriasoul canonical question banks.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const QUESTIONS = ${JSON.stringify(finalQuestions, null, 2)};\n`, "utf8");
 await fs.writeFile(cityOutput, `// GENERATED FILE. Source: PatriaSoul/patriasoul verified Brani svoj grad layers.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const CITY_QUESTIONS = ${JSON.stringify(finalCityQuestions, null, 2)};\n`, "utf8");
 console.log(`Generirano: ${output}`);
 console.log(`Generirano: ${cityOutput}`);
+console.log(`Generiran audit: ${auditOutput}`);
