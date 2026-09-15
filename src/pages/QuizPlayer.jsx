@@ -9,6 +9,7 @@ import {
   playWrong,
   playTimeout,
   playFinish,
+  playCountdownTick,
   stopMusic,
 } from "../lib/audioManager";
 
@@ -22,6 +23,7 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
   const [audioOn, setAudioOn] = useState(isAudioEnabled());
   const startRef = useRef(Date.now());
   const scoreRef = useRef(0);
+  const lastTickRef = useRef(null);
   const q = questions[index];
   const progress = questions.length ? ((index + 1) / questions.length) * 100 : 0;
   const answerOptions = Array.isArray(q?.options) ? q.options.map((option) => option.text) : q?.answers ?? [];
@@ -35,6 +37,10 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
 
   useEffect(() => {
     if (!questions.length || answered) return undefined;
+    if (audioOn && remaining <= Math.min(5, timeLimit) && remaining > 0 && lastTickRef.current !== remaining) {
+      playCountdownTick(remaining === 1);
+      lastTickRef.current = remaining;
+    }
     if (remaining <= 0) {
       playTimeout();
       setSelected(-1);
@@ -43,7 +49,11 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
     }
     const timer = setTimeout(() => setRemaining((v) => v - 1), 1000);
     return () => clearTimeout(timer);
-  }, [remaining, answered, questions.length]);
+  }, [remaining, answered, questions.length, audioOn, timeLimit]);
+
+  useEffect(() => {
+    lastTickRef.current = null;
+  }, [index]);
 
   useEffect(() => {
     if (!answered) return undefined;
@@ -54,13 +64,13 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
         setAnswered(false);
         setRemaining(timeLimit);
       } else {
-        playFinish();
+        if (audioOn) playFinish();
         stopMusic();
         onComplete?.({ score: scoreRef.current, total: questions.length, timeSeconds: Math.floor((Date.now() - startRef.current) / 1000) });
       }
     }, 1100);
     return () => clearTimeout(timer);
-  }, [answered, index, questions.length, timeLimit, onComplete]);
+  }, [answered, index, questions.length, timeLimit, onComplete, audioOn]);
 
   const toggleAudio = async () => {
     const next = !audioOn;
@@ -77,8 +87,8 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
     setAnswered(true);
     if (i === correctOptionIndex) {
       scoreRef.current += 1;
-      playCorrect();
-    } else {
+      if (audioOn) playCorrect();
+    } else if (audioOn) {
       playWrong();
     }
   };
@@ -93,16 +103,10 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
         <div className="mb-2 flex items-center justify-between gap-4">
           <div>{subtitle && <div className="text-xs uppercase tracking-[0.2em] text-amber-400/80">{subtitle}</div>}<h1 className="font-display text-2xl font-bold">{title}</h1></div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={toggleAudio}
-              aria-label={audioOn ? "Isključi zvuk" : "Uključi zvuk"}
-              title={audioOn ? "Isključi zvuk" : "Uključi zvuk"}
-              className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white"
-            >
+            <button type="button" onClick={toggleAudio} aria-label={audioOn ? "Isključi zvuk" : "Uključi zvuk"} title={audioOn ? "Isključi zvuk" : "Uključi zvuk"} className="rounded-full border border-white/10 bg-white/5 p-2.5 text-white/70 transition hover:bg-white/10 hover:text-white">
               {audioOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
             </button>
-            <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-sm text-white/70"><Clock className="h-4 w-4" />00:{String(Math.max(0, remaining)).padStart(2, "0")}</div>
+            <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${remaining <= 5 ? "bg-red-500/20 text-red-300" : "bg-white/5 text-white/70"}`}><Clock className="h-4 w-4" />00:{String(Math.max(0, remaining)).padStart(2, "0")}</div>
           </div>
         </div>
         <div className="mb-8 flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10"><motion.div className="h-full bg-gradient-to-r from-amber-400 to-red-600" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.4 }} /></div><div className="whitespace-nowrap text-sm font-medium text-white/70">{index + 1} / {questions.length}</div></div>
