@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AuthProvider } from "./AuthContext";
+import { startAudio } from "./lib/audioManager";
 import "./index.css";
 
 function PWAInstallPrompt() {
@@ -117,6 +118,41 @@ function PWAInstallPrompt() {
   );
 }
 
+function AppAudio() {
+  useEffect(() => {
+    let active = true;
+
+    const tryStart = () => {
+      if (!active) return;
+      void startAudio("croatian");
+    };
+
+    // Try immediately. Browsers that permit autoplay will start the intro music here.
+    tryStart();
+
+    // If autoplay is blocked, the first user interaction unlocks Web Audio/HTML5 audio.
+    const unlock = () => {
+      tryStart();
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+
+    window.addEventListener("pointerdown", unlock, { once: true, passive: true });
+    window.addEventListener("touchstart", unlock, { once: true, passive: true });
+    window.addEventListener("keydown", unlock, { once: true });
+
+    return () => {
+      active = false;
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("touchstart", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  return null;
+}
+
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -166,6 +202,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AppErrorBoundary>
       <AuthProvider>
+        <AppAudio />
         <App />
         <PWAInstallPrompt />
       </AuthProvider>
