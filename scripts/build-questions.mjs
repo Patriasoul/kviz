@@ -30,10 +30,6 @@ async function loadSource(url) {
 function prepareSource(source) {
   let prepared = source.replace(/([,{]\s*)([A-Za-z_$][\w$-]*-[\w$-]+)\s*:/g, "$1'$2':");
 
-  // Some verified city layers use the original compact shape:
-  // [answer, explanation, distractors]. Others use:
-  // [label, [answer, explanation, distractors]].
-  // Normalize both forms before executing the source.
   prepared = prepared.replace(
     /\[f\[1\]\[0\],\.\.\.f\[1\]\[2\]\]/g,
     "Array.isArray(f[1][2]) ? [f[1][0], ...f[1][2]] : (Array.isArray(f[1][1]) ? f[1][1] : [])",
@@ -91,15 +87,29 @@ const skippedCitySources = [];
 for (const url of CITY_SOURCES) {
   try {
     const source = prepareSource(await loadSource(url));
+    const beforeKeys = new Set(Object.keys(window));
     vm.runInContext(source, context, { filename: url });
 
-    for (const [key, value] of Object.entries(window)) {
-      if (!/^PatriaCityVerified\d*$/.test(key) || !value) continue;
+    const cityMatch = source.match(/(?:const|let|var)\s+city\s*=\s*['"]([^'"]+)['"]/);
+    const sourceCity = cityMatch?.[1] || null;
+    const layerKeys = Object.keys(window).filter(
+      (key) => /^PatriaCityVerified\d*$/.test(key) && (!beforeKeys.has(key) || key === "PatriaCityVerified"),
+    );
+
+    if (!layerKeys.length) {
+      throw new Error("City layer nije registrirao PatriaCityVerified objekt.");
+    }
+
+    for (const key of layerKeys) {
+      const value = window[key];
+      if (!value) continue;
+
       const rows = typeof value.all === "function"
         ? value.all()
         : typeof value.forCity === "function"
-          ? value.forCity()
+          ? value.forCity(sourceCity)
           : [];
+
       if (Array.isArray(rows)) cityQuestions.push(...rows);
     }
   } catch (error) {
