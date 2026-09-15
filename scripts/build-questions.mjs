@@ -36,7 +36,8 @@ function prepareSource(source) {
 function createContext() {
   const window = {};
   const document = { write() {} };
-  return { window, context: vm.createContext({ window, document, console }) };
+  const context = vm.createContext({ window, document, console });
+  return { window, context };
 }
 
 const { window, context } = createContext();
@@ -65,20 +66,27 @@ const finalQuestions = [...unique.values()];
 
 const cityQuestions = [];
 const skippedCitySources = [];
+const seenCityLayerKeys = new Set();
+
 for (const url of CITY_SOURCES) {
   try {
     const source = prepareSource(await loadSource(url));
+    const beforeKeys = new Set(Object.keys(context));
+    const beforeWindowKeys = new Set(Object.keys(window));
     vm.runInContext(source, context, { filename: url });
 
-    // City layers register their own PatriaCityVerifiedN object. Collect every
-    // registered layer after execution; do not infer a city from the filename.
-    // Some layers contain multiple cities, so forCity() without an argument is
-    // not sufficient. Prefer all() when the verified layer exposes it.
-    for (const [key, value] of Object.entries(window)) {
-      if (!/^PatriaCityVerified\d*$/.test(key) || !value) continue;
-      const rows = typeof value.all === "function"
-        ? value.all()
-        : [];
+    // Verified city files register on either window or globalThis. In a VM
+    // context globalThis is the context root, not the nested window object.
+    // Read both scopes so every verified layer is collected exactly once.
+    const layerEntries = [
+      ...Object.entries(context).filter(([key]) => /^PatriaCityVerified\d*$/.test(key) && !beforeKeys.has(key)),
+      ...Object.entries(window).filter(([key]) => /^PatriaCityVerified\d*$/.test(key) && !beforeWindowKeys.has(key)),
+    ];
+
+    for (const [key, value] of layerEntries) {
+      if (!value || seenCityLayerKeys.has(key)) continue;
+      seenCityLayerKeys.add(key);
+      const rows = typeof value.all === "function" ? value.all() : [];
       if (Array.isArray(rows)) cityQuestions.push(...rows);
     }
   } catch (error) {
@@ -95,7 +103,7 @@ for (const q of cityQuestions) {
     question: String(q.question || ""), answers, correctIndex: Number(q.correctIndex), sourceUrl: q.sourceUrl || null,
   };
   if (normalized.question && answers.length === 4 && Number.isInteger(normalized.correctIndex) && normalized.correctIndex >= 0 && normalized.correctIndex <= 3) {
-    uniqueCities.set(normalized.id, normalized);
+    uniqueCities.set(`${normalized.cityId}::${normalized.id}`, normalized);
   }
 }
 
