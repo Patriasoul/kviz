@@ -7,8 +7,13 @@ import "./index.css";
 function PWAInstallPrompt() {
   const [installEvent, setInstallEvent] = useState(null);
   const [installed, setInstalled] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
+    const standalone = window.matchMedia?.("(display-mode: standalone)")?.matches;
+    const iosStandalone = window.navigator.standalone === true;
+    if (standalone || iosStandalone) setInstalled(true);
+
     const onBeforeInstall = (event) => {
       event.preventDefault();
       setInstallEvent(event);
@@ -16,6 +21,7 @@ function PWAInstallPrompt() {
     const onInstalled = () => {
       setInstalled(true);
       setInstallEvent(null);
+      setShowHelp(false);
     };
 
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
@@ -27,9 +33,14 @@ function PWAInstallPrompt() {
     };
   }, []);
 
-  if (!installEvent || installed) return null;
+  if (installed) return null;
 
   async function install() {
+    if (!installEvent) {
+      setShowHelp(true);
+      return;
+    }
+
     const event = installEvent;
     setInstallEvent(null);
     await event.prompt();
@@ -37,15 +48,72 @@ function PWAInstallPrompt() {
   }
 
   return (
-    <button
-      type="button"
-      className="patria-install-button"
-      onClick={install}
-      aria-label="Instaliraj PatriaSoul na uređaj"
-    >
-      <span aria-hidden="true">📱</span>
-      <span>Instaliraj PatriaSoul</span>
-    </button>
+    <>
+      <button
+        type="button"
+        className="patria-install-button"
+        onClick={install}
+        aria-label="Instaliraj PatriaSoul na uređaj"
+      >
+        <span aria-hidden="true">📱</span>
+        <span>Instaliraj PatriaSoul</span>
+      </button>
+
+      {showHelp && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Kako instalirati PatriaSoul"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "grid",
+            placeItems: "center",
+            padding: 20,
+            background: "rgba(0,0,0,.45)",
+          }}
+          onClick={() => setShowHelp(false)}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(420px, 100%)",
+              borderRadius: 18,
+              padding: 24,
+              background: "#fff",
+              color: "#172033",
+              boxShadow: "0 20px 60px rgba(0,0,0,.25)",
+            }}
+          >
+            <div style={{ fontSize: 36, marginBottom: 8 }}>🇭🇷</div>
+            <h2 style={{ margin: "0 0 10px" }}>Instaliraj PatriaSoul</h2>
+            <p style={{ margin: "0 0 14px", lineHeight: 1.55 }}>
+              Ako se instalacija ne otvori automatski, otvori izbornik preglednika i odaberi <strong>Instaliraj aplikaciju</strong> ili <strong>Dodaj na početni zaslon</strong>.
+            </p>
+            <p style={{ margin: "0 0 18px", lineHeight: 1.55, fontSize: 14, opacity: 0.75 }}>
+              Na Androidu je to najčešće izbornik ⋮ u Chromeu. Na iPhoneu odaberi Dijeli → Dodaj na početni zaslon.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowHelp(false)}
+              style={{
+                width: "100%",
+                padding: "11px 16px",
+                border: 0,
+                borderRadius: 10,
+                background: "#193452",
+                color: "#fff",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              U redu
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
