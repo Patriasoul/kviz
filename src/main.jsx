@@ -1,8 +1,53 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { AuthProvider } from "./AuthContext";
 import "./index.css";
+
+function PWAInstallPrompt() {
+  const [installEvent, setInstallEvent] = useState(null);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    const onBeforeInstall = (event) => {
+      event.preventDefault();
+      setInstallEvent(event);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setInstallEvent(null);
+    };
+
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    window.addEventListener("appinstalled", onInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  if (!installEvent || installed) return null;
+
+  async function install() {
+    const event = installEvent;
+    setInstallEvent(null);
+    await event.prompt();
+    await event.userChoice;
+  }
+
+  return (
+    <button
+      type="button"
+      className="patria-install-button"
+      onClick={install}
+      aria-label="Instaliraj PatriaSoul na uređaj"
+    >
+      <span aria-hidden="true">📱</span>
+      <span>Instaliraj PatriaSoul</span>
+    </button>
+  );
+}
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
@@ -41,11 +86,20 @@ class AppErrorBoundary extends React.Component {
   }
 }
 
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/kviz/sw.js", { scope: "/kviz/" }).catch((error) => {
+      console.warn("PatriaSoul PWA service worker nije registriran:", error);
+    });
+  });
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <AppErrorBoundary>
       <AuthProvider>
         <App />
+        <PWAInstallPrompt />
       </AuthProvider>
     </AppErrorBoundary>
   </React.StrictMode>
