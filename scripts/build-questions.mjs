@@ -9,6 +9,7 @@ const SOURCES = [
   `${MAIN_REPO}/bastina.js`,
 ];
 
+const CITY_REGISTRY_SOURCE = `${MAIN_REPO}/gradovi.js`;
 const CITY_SOURCES = [
   `${MAIN_REPO}/patriasoul-city-questions-verified.js`,
   ...Array.from({ length: 126 }, (_, index) => index + 2)
@@ -64,33 +65,54 @@ for (const q of questions) {
 }
 const finalQuestions = [...unique.values()];
 
+// The verified city layers expose forCity(cityName), not all().
+// Load the canonical 127-city registry first, then query every verified layer
+// against that registry. The two omitted numeric layers (33 and 121) are
+// intentional duplicates of Omiš and Metković; their canonical city data is
+// retained through the legacy verified layer.
+const cityRegistrySource = prepareSource(await loadSource(CITY_REGISTRY_SOURCE));
+vm.runInContext(cityRegistrySource, context, { filename: CITY_REGISTRY_SOURCE });
+const cityRegistry = Array.isArray(window.PATRIA_CITY_DATA) ? window.PATRIA_CITY_DATA : [];
+
 const cityQuestions = [];
 const skippedCitySources = [];
-const seenCityLayerKeys = new Set();
+const loadedCityLayers = new Map();
 
 for (const url of CITY_SOURCES) {
   try {
     const source = prepareSource(await loadSource(url));
-    const beforeKeys = new Set(Object.keys(context));
-    const beforeWindowKeys = new Set(Object.keys(window));
     vm.runInContext(source, context, { filename: url });
 
-    // Verified city files register on either window or globalThis. In a VM
-    // context globalThis is the context root, not the nested window object.
-    // Read both scopes so every verified layer is collected exactly once.
     const layerEntries = [
-      ...Object.entries(context).filter(([key]) => /^PatriaCityVerified\d*$/.test(key) && !beforeKeys.has(key)),
-      ...Object.entries(window).filter(([key]) => /^PatriaCityVerified\d*$/.test(key) && !beforeWindowKeys.has(key)),
+      ...Object.entries(context).filter(([key]) => /^PatriaCityVerified\d*$/.test(key)),
+      ...Object.entries(window).filter(([key]) => /^PatriaCityVerified\d*$/.test(key)),
     ];
 
     for (const [key, value] of layerEntries) {
-      if (!value || seenCityLayerKeys.has(key)) continue;
-      seenCityLayerKeys.add(key);
-      const rows = typeof value.all === "function" ? value.all() : [];
-      if (Array.isArray(rows)) cityQuestions.push(...rows);
+      if (!value || loadedCityLayers.has(key)) continue;
+      loadedCityLayers.set(key, value);
     }
   } catch (error) {
     skippedCitySources.push({ url, message: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+for (const [key, layer] of loadedCityLayers) {
+  if (typeof layer.forCity !== "function") continue;
+  for (const city of cityRegistry) {
+    const rows = layer.forCity(city.name);
+    if (Array.isArray(rows)) cityQuestions.push(...rows);
+  }
+}
+
+// Legacy layer contains the canonical data for Omiš and Metković after their
+// duplicate numeric layers (33 and 121) were removed. Query only those cities
+// instead of importing the legacy layer's supplemental rows for every city.
+const legacyLayer = loadedCityLayers.get("PatriaCityVerified");
+if (legacyLayer && typeof legacyLayer.forCity === "function") {
+  for (const city of cityRegistry.filter(({ slug }) => slug === "omis" || slug === "metkovic")) {
+    const rows = legacyLayer.forCity(city.name);
+    if (Array.isArray(rows)) cityQuestions.push(...rows);
   }
 }
 
@@ -116,6 +138,7 @@ const oversizedCities = Object.entries(cityCounts).filter(([, count]) => count >
 
 console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
 console.log(`Brani svoj grad pitanja: ${finalCityQuestions.length}`);
+console.log(`Gradova u registru: ${cityRegistry.length}`);
 console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
 console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
 console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
@@ -128,7 +151,7 @@ if (skippedCitySources.length) {
   for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
 }
 
-if (skippedCitySources.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
+if (cityRegistry.length !== 127 || skippedCitySources.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
   throw new Error(`City audit nije prosao: ocekivano 127 gradova i 9525 pitanja (75 po gradu), dobiveno ${Object.keys(cityCounts).length} gradova i ${finalCityQuestions.length} pitanja.`);
 }
 
