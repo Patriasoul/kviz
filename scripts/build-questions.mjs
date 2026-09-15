@@ -41,18 +41,18 @@ function createContext() {
   return { window, context };
 }
 
-const { window, context } = createContext();
+const { window: mainWindow, context: mainContext } = createContext();
 
 for (const url of SOURCES) {
   const source = prepareSource(await loadSource(url));
-  vm.runInContext(source, context, { filename: url });
+  vm.runInContext(source, mainContext, { filename: url });
 }
 
 const questions = [];
-const extra = window.PATRIA_EXTRA_QUESTIONS || {};
+const extra = mainWindow.PATRIA_EXTRA_QUESTIONS || {};
 for (const bank of Object.values(extra)) if (Array.isArray(bank)) questions.push(...bank);
-if (Array.isArray(window.PATRIA_BASTINA)) questions.push(...window.PATRIA_BASTINA);
-if (Array.isArray(window.PATRIA_QUESTIONS)) questions.push(...window.PATRIA_QUESTIONS);
+if (Array.isArray(mainWindow.PATRIA_BASTINA)) questions.push(...mainWindow.PATRIA_BASTINA);
+if (Array.isArray(mainWindow.PATRIA_QUESTIONS)) questions.push(...mainWindow.PATRIA_QUESTIONS);
 
 const unique = new Map();
 for (const q of questions) {
@@ -65,21 +65,24 @@ for (const q of questions) {
 }
 const finalQuestions = [...unique.values()];
 
-// The verified city layers expose forCity(cityName), not all().
-// Load the canonical 127-city registry first, then query every verified layer
-// against that registry. The two omitted numeric layers (33 and 121) are
-// intentional duplicates of Omiš and Metković; their canonical city data is
-// retained through the legacy verified layer.
-const cityRegistrySource = prepareSource(await loadSource(CITY_REGISTRY_SOURCE));
-vm.runInContext(cityRegistrySource, context, { filename: CITY_REGISTRY_SOURCE });
-const cityRegistry = Array.isArray(window.PATRIA_CITY_DATA) ? window.PATRIA_CITY_DATA : [];
+// Load the canonical 127-city registry.
+const registrySource = prepareSource(await loadSource(CITY_REGISTRY_SOURCE));
+vm.runInContext(registrySource, mainContext, { filename: CITY_REGISTRY_SOURCE });
+const cityRegistry = Array.isArray(mainWindow.PATRIA_CITY_DATA) ? mainWindow.PATRIA_CITY_DATA : [];
+const registrySlugs = new Set(cityRegistry.map((city) => String(city.slug)));
 
-const cityQuestions = [];
+// Each verified source is evaluated in a FRESH VM context. This is important:
+// sources intentionally expose globals with layer-specific names, and a shared
+// context can retain old layers and make one source appear multiple times.
+// We collect the layer's own forCity() result, then select exactly one verified
+// 75-question layer for every canonical city. No question is rewritten or
+// fabricated; the source layer itself is the authority.
+const cityCandidates = new Map();
 const skippedCitySources = [];
-const loadedCityLayers = new Map();
 
 for (const url of CITY_SOURCES) {
   try {
+    const { window, context } = createContext();
     const source = prepareSource(await loadSource(url));
     vm.runInContext(source, context, { filename: url });
 
@@ -87,54 +90,51 @@ for (const url of CITY_SOURCES) {
       ...Object.entries(context).filter(([key]) => /^PatriaCityVerified\d*$/.test(key)),
       ...Object.entries(window).filter(([key]) => /^PatriaCityVerified\d*$/.test(key)),
     ];
+    const layers = new Map(layerEntries);
 
-    for (const [key, value] of layerEntries) {
-      if (!value || loadedCityLayers.has(key)) continue;
-      loadedCityLayers.set(key, value);
+    for (const [layerKey, layer] of layers) {
+      if (!layer || typeof layer.forCity !== "function") continue;
+      for (const city of cityRegistry) {
+        const rows = layer.forCity(city.name);
+        if (!Array.isArray(rows) || !rows.length) continue;
+        const validRows = rows.filter((q) => q && q.cityId === city.slug && q.citySource === "verified");
+        if (!validRows.length) continue;
+        const key = city.slug;
+        if (!cityCandidates.has(key)) cityCandidates.set(key, []);
+        cityCandidates.get(key).push({ url, layerKey, rows: validRows });
+      }
     }
   } catch (error) {
     skippedCitySources.push({ url, message: error instanceof Error ? error.message : String(error) });
   }
 }
 
-for (const [key, layer] of loadedCityLayers) {
-  if (typeof layer.forCity !== "function") continue;
-  for (const city of cityRegistry) {
-    const rows = layer.forCity(city.name);
-    if (Array.isArray(rows)) cityQuestions.push(...rows);
+const finalCityQuestions = [];
+const selectedCityLayers = new Map();
+const missingCanonicalCities = [];
+const ambiguousCanonicalCities = [];
+
+for (const city of cityRegistry) {
+  const candidates = cityCandidates.get(city.slug) || [];
+  const exact = candidates.filter((candidate) => candidate.rows.length === 75);
+  if (!exact.length) {
+    missingCanonicalCities.push(`${city.slug}=${candidates.map((candidate) => candidate.rows.length).join("/") || 0}`);
+    continue;
   }
+  // If more than one verified source contains a complete 75-question layer,
+  // keep the first canonical layer and ignore duplicate complete layers.
+  if (exact.length > 1) ambiguousCanonicalCities.push(`${city.slug}=${exact.length}`);
+  const selected = exact[0];
+  selectedCityLayers.set(city.slug, `${selected.layerKey} (${selected.url})`);
+  finalCityQuestions.push(...selected.rows);
 }
 
-// Legacy layer contains the canonical data for Omiš and Metković after their
-// duplicate numeric layers (33 and 121) were removed. Query only those cities
-// instead of importing the legacy layer's supplemental rows for every city.
-const legacyLayer = loadedCityLayers.get("PatriaCityVerified");
-if (legacyLayer && typeof legacyLayer.forCity === "function") {
-  for (const city of cityRegistry.filter(({ slug }) => slug === "omis" || slug === "metkovic")) {
-    const rows = legacyLayer.forCity(city.name);
-    if (Array.isArray(rows)) cityQuestions.push(...rows);
-  }
-}
-
-const uniqueCities = new Map();
-for (const q of cityQuestions) {
-  if (!q || q.id == null || !q.cityId) continue;
-  const answers = Array.isArray(q.answers) ? q.answers.map(String) : [];
-  const normalized = {
-    id: String(q.id), cityId: String(q.cityId), citySource: q.citySource || "verified", category: q.category || "gradovi",
-    question: String(q.question || ""), answers, correctIndex: Number(q.correctIndex), sourceUrl: q.sourceUrl || null,
-  };
-  if (normalized.question && answers.length === 4 && Number.isInteger(normalized.correctIndex) && normalized.correctIndex >= 0 && normalized.correctIndex <= 3) {
-    uniqueCities.set(`${normalized.cityId}::${normalized.id}`, normalized);
-  }
-}
-
-const finalCityQuestions = [...uniqueCities.values()];
 const cityCounts = {};
 for (const q of finalCityQuestions) cityCounts[q.cityId] = (cityCounts[q.cityId] || 0) + 1;
 const completeCities = Object.entries(cityCounts).filter(([, count]) => count === 75);
 const incompleteCities = Object.entries(cityCounts).filter(([, count]) => count < 75);
 const oversizedCities = Object.entries(cityCounts).filter(([, count]) => count > 75);
+const nonCanonicalCities = Object.keys(cityCounts).filter((slug) => !registrySlugs.has(slug));
 
 console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
 console.log(`Brani svoj grad pitanja: ${finalCityQuestions.length}`);
@@ -143,6 +143,9 @@ console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
 console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
 console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
 console.log(`Gradova s vise od 75 pitanja: ${oversizedCities.length}`);
+if (missingCanonicalCities.length) console.log(`NEMA KANONSKOG SLOJA: ${missingCanonicalCities.join(", ")}`);
+if (ambiguousCanonicalCities.length) console.log(`DUPLI KANONSKI SLOJEVI: ${ambiguousCanonicalCities.join(", ")}`);
+if (nonCanonicalCities.length) console.log(`NEKANONSKI GRADOVI: ${nonCanonicalCities.join(", ")}`);
 if (incompleteCities.length) console.log(`NEDOSTAJU: ${incompleteCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
 if (oversizedCities.length) console.log(`VIŠAK: ${oversizedCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
 
@@ -151,7 +154,7 @@ if (skippedCitySources.length) {
   for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
 }
 
-if (cityRegistry.length !== 127 || skippedCitySources.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
+if (cityRegistry.length !== 127 || skippedCitySources.length || missingCanonicalCities.length || nonCanonicalCities.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
   throw new Error(`City audit nije prosao: ocekivano 127 gradova i 9525 pitanja (75 po gradu), dobiveno ${Object.keys(cityCounts).length} gradova i ${finalCityQuestions.length} pitanja.`);
 }
 
