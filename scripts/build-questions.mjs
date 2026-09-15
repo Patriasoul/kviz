@@ -17,6 +17,17 @@ const CITY_SOURCES = [
     .map((id) => `${MAIN_REPO}/patriasoul-city-questions-verified-${id}.js`),
 ];
 
+// Audited canonical layer plans. These are source-selection rules only:
+// the original verified questions are not rewritten, truncated, or fabricated.
+// Omiš is intentionally composed from layers 29 + 34 = 20 + 55 = 75.
+// Sinj, Šibenik and Trilj each have a dedicated canonical 75-question layer.
+const CANONICAL_CITY_LAYER_PLAN = {
+  omis: ["PatriaCityVerified29", "PatriaCityVerified34"],
+  sinj: ["PatriaCityVerified30"],
+  sibenik: ["PatriaCityVerified32"],
+  trilj: ["PatriaCityVerified38"],
+};
+
 const root = process.cwd();
 const dataDir = path.join(root, "src", "data");
 const output = path.join(dataDir, "questions.generated.js");
@@ -124,36 +135,54 @@ const missingCanonicalCities = [];
 const duplicateCompleteLayers = [];
 
 for (const city of cityRegistry) {
-  const candidates = cityCandidates.get(city.slug) || [];
-  const completeCandidates = candidates.filter((candidate) => candidate.rows.length === 75);
+  const allCandidates = cityCandidates.get(city.slug) || [];
+  const plannedLayers = CANONICAL_CITY_LAYER_PLAN[city.slug];
+  const candidates = plannedLayers
+    ? allCandidates.filter((candidate) => plannedLayers.includes(candidate.layerKey))
+    : allCandidates;
 
   let rows = [];
   let selected = [];
 
-  if (completeCandidates.length) {
-    // The earliest complete layer is the canonical set for this generator.
-    // Later complete sets are retained in the source repository but are not
-    // merged, because doing so would create >75 questions for the same city.
-    selected = [completeCandidates[0]];
-    rows = completeCandidates[0].rows;
-    if (completeCandidates.length > 1) {
-      const firstSignature = candidateSignature(completeCandidates[0]);
-      const laterSignatures = new Set(completeCandidates.slice(1).map(candidateSignature));
-      duplicateCompleteLayers.push(`${city.slug}=${completeCandidates.map((candidate) => candidate.layerKey).join(",")}${laterSignatures.has(firstSignature) ? " (identične)" : " (različite)"}`);
-    }
-  } else {
-    // If no complete layer exists, combine all verified incremental rows and
-    // require the result itself to resolve to exactly 75. Never fabricate,
-    // repeat, truncate, or rewrite questions to reach the target.
+  if (plannedLayers) {
+    // Explicitly audited cities use only their documented canonical layer plan.
+    // Deduplicate by question ID while preserving every original question.
     const uniqueRows = new Map();
-    for (const candidate of candidates) {
+    for (const layerKey of plannedLayers) {
+      const candidate = candidates.find((item) => item.layerKey === layerKey);
+      if (!candidate) continue;
       for (const row of candidate.rows) {
         const id = String(row.id);
         if (!uniqueRows.has(id)) uniqueRows.set(id, row);
       }
+      selected.push(candidate);
     }
     rows = [...uniqueRows.values()];
-    selected = candidates;
+  } else {
+    const completeCandidates = candidates.filter((candidate) => candidate.rows.length === 75);
+
+    if (completeCandidates.length) {
+      // The earliest complete layer is the canonical set for this generator.
+      // Later complete sets are retained in the source repository but are not
+      // merged, because doing so would create >75 questions for the same city.
+      selected = [completeCandidates[0]];
+      rows = completeCandidates[0].rows;
+      if (completeCandidates.length > 1) {
+        const firstSignature = candidateSignature(completeCandidates[0]);
+        const laterSignatures = new Set(completeCandidates.slice(1).map(candidateSignature));
+        duplicateCompleteLayers.push(`${city.slug}=${completeCandidates.map((candidate) => candidate.layerKey).join(",")}${laterSignatures.has(firstSignature) ? " (identične)" : " (različite)"}`);
+      }
+    } else {
+      const uniqueRows = new Map();
+      for (const candidate of candidates) {
+        for (const row of candidate.rows) {
+          const id = String(row.id);
+          if (!uniqueRows.has(id)) uniqueRows.set(id, row);
+        }
+      }
+      rows = [...uniqueRows.values()];
+      selected = candidates;
+    }
   }
 
   if (rows.length !== 75) {
@@ -179,6 +208,8 @@ console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
 console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
 console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
 console.log(`Gradova s vise od 75 pitanja: ${oversizedCities.length}`);
+if (CANONICAL_CITY_LAYER_PLAN) console.log(`AUDITIRANI KANONSKI PLANOVI: ${Object.entries(CANONICAL_CITY_LAYER_PLAN).map(([city, layers]) => `${city}=${layers.join("+")}`).join(", ")}`);
+if (selectedCityLayers.size) console.log(`ODABRANI SLOJEVI: ${[...selectedCityLayers.entries()].filter(([city]) => CANONICAL_CITY_LAYER_PLAN[city]).map(([city, layers]) => `${city}=${layers}`).join(", ")}`);
 if (duplicateCompleteLayers.length) console.log(`DUPLI KOMPLETNI SLOJEVI: ${duplicateCompleteLayers.join(", ")}`);
 if (missingCanonicalCities.length) console.log(`NEMA KOMPLETNOG SLOJA: ${missingCanonicalCities.join(", ")}`);
 if (nonCanonicalCities.length) console.log(`NEKANONSKI GRADOVI: ${nonCanonicalCities.join(", ")}`);
