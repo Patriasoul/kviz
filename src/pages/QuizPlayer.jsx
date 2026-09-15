@@ -15,7 +15,7 @@ import {
 
 const LETTERS = ["A", "B", "C", "D"];
 
-export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20, onComplete, onQuit }) {
+export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20, quizType = "croatian", onComplete, onQuit }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
   const [answered, setAnswered] = useState(false);
@@ -31,9 +31,9 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
 
   useEffect(() => {
     if (!questions.length || !audioOn) return undefined;
-    startAudio();
+    startAudio(quizType);
     return () => stopMusic();
-  }, []);
+  }, [quizType, questions.length]);
 
   useEffect(() => {
     if (!questions.length || answered) return undefined;
@@ -42,7 +42,7 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
       lastTickRef.current = remaining;
     }
     if (remaining <= 0) {
-      playTimeout();
+      if (audioOn) playTimeout();
       setSelected(-1);
       setAnswered(true);
       return undefined;
@@ -76,13 +76,13 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
     const next = !audioOn;
     setAudioOn(next);
     setAudioEnabled(next);
-    if (next) await startAudio();
+    if (next) await startAudio(quizType);
     else stopMusic();
   };
 
   const handleAnswer = async (i) => {
     if (answered || !q) return;
-    if (audioOn) await startAudio();
+    if (audioOn) await startAudio(quizType);
     setSelected(i);
     setAnswered(true);
     if (i === correctOptionIndex) {
