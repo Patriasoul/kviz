@@ -65,18 +65,17 @@ for (const q of questions) {
 }
 const finalQuestions = [...unique.values()];
 
-// Load the canonical 127-city registry.
 const registrySource = prepareSource(await loadSource(CITY_REGISTRY_SOURCE));
 vm.runInContext(registrySource, mainContext, { filename: CITY_REGISTRY_SOURCE });
 const cityRegistry = Array.isArray(mainWindow.PATRIA_CITY_DATA) ? mainWindow.PATRIA_CITY_DATA : [];
 const registrySlugs = new Set(cityRegistry.map((city) => String(city.slug)));
 
-// Each verified source is evaluated in a FRESH VM context. This is important:
-// sources intentionally expose globals with layer-specific names, and a shared
-// context can retain old layers and make one source appear multiple times.
-// We collect the layer's own forCity() result, then select exactly one verified
-// 75-question layer for every canonical city. No question is rewritten or
-// fabricated; the source layer itself is the authority.
+// Every verified source is evaluated in its own VM context so globals from one
+// file cannot leak into another. We then collect ALL verified rows for each
+// canonical city across ALL layers and deduplicate by question id. This mirrors
+// the canonical audit in the source repository: layers are additive, not
+// mutually exclusive. Nothing is rewritten, fabricated, truncated, or selected
+// merely because one individual layer happens to contain 75 rows.
 const cityCandidates = new Map();
 const skippedCitySources = [];
 
@@ -116,17 +115,25 @@ const ambiguousCanonicalCities = [];
 
 for (const city of cityRegistry) {
   const candidates = cityCandidates.get(city.slug) || [];
-  const exact = candidates.filter((candidate) => candidate.rows.length === 75);
-  if (!exact.length) {
-    missingCanonicalCities.push(`${city.slug}=${candidates.map((candidate) => candidate.rows.length).join("/") || 0}`);
+  const uniqueRows = new Map();
+
+  for (const candidate of candidates) {
+    for (const row of candidate.rows) {
+      const id = String(row.id || "");
+      if (!id) continue;
+      if (!uniqueRows.has(id)) uniqueRows.set(id, row);
+    }
+  }
+
+  const rows = [...uniqueRows.values()];
+  if (rows.length !== 75) {
+    missingCanonicalCities.push(`${city.slug}=${rows.length}${candidates.length ? `/${candidates.map((candidate) => candidate.rows.length).join("/")}` : ""}`);
     continue;
   }
-  // If more than one verified source contains a complete 75-question layer,
-  // keep the first canonical layer and ignore duplicate complete layers.
-  if (exact.length > 1) ambiguousCanonicalCities.push(`${city.slug}=${exact.length}`);
-  const selected = exact[0];
-  selectedCityLayers.set(city.slug, `${selected.layerKey} (${selected.url})`);
-  finalCityQuestions.push(...selected.rows);
+
+  if (candidates.length > 1) ambiguousCanonicalCities.push(`${city.slug}=${candidates.length}`);
+  selectedCityLayers.set(city.slug, candidates.map((candidate) => candidate.layerKey).join(","));
+  finalCityQuestions.push(...rows);
 }
 
 const cityCounts = {};
@@ -144,7 +151,7 @@ console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
 console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
 console.log(`Gradova s vise od 75 pitanja: ${oversizedCities.length}`);
 if (missingCanonicalCities.length) console.log(`NEMA KANONSKOG SLOJA: ${missingCanonicalCities.join(", ")}`);
-if (ambiguousCanonicalCities.length) console.log(`DUPLI KANONSKI SLOJEVI: ${ambiguousCanonicalCities.join(", ")}`);
+if (ambiguousCanonicalCities.length) console.log(`SLOJEVI KOMBINIRANI: ${ambiguousCanonicalCities.join(", ")}`);
 if (nonCanonicalCities.length) console.log(`NEKANONSKI GRADOVI: ${nonCanonicalCities.join(", ")}`);
 if (incompleteCities.length) console.log(`NEDOSTAJU: ${incompleteCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
 if (oversizedCities.length) console.log(`VIŠAK: ${oversizedCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
