@@ -68,16 +68,17 @@ const skippedCitySources = [];
 for (const url of CITY_SOURCES) {
   try {
     const source = prepareSource(await loadSource(url));
-    const beforeKeys = new Set(Object.keys(window));
     vm.runInContext(source, context, { filename: url });
-    const cityMatch = source.match(/(?:const|let|var)\s+city\s*=\s*['"]([^'"]+)['"]/);
-    const sourceCity = cityMatch?.[1] || null;
-    const layerKeys = Object.keys(window).filter((key) => /^PatriaCityVerified\d*$/.test(key) && (!beforeKeys.has(key) || key === "PatriaCityVerified"));
-    if (!layerKeys.length) throw new Error("City layer nije registrirao PatriaCityVerified objekt.");
-    for (const key of layerKeys) {
-      const value = window[key];
-      if (!value) continue;
-      const rows = typeof value.all === "function" ? value.all() : typeof value.forCity === "function" ? value.forCity(sourceCity) : [];
+
+    // City layers register their own PatriaCityVerifiedN object. Collect every
+    // registered layer after execution; do not infer a city from the filename.
+    // Some layers contain multiple cities, so forCity() without an argument is
+    // not sufficient. Prefer all() when the verified layer exposes it.
+    for (const [key, value] of Object.entries(window)) {
+      if (!/^PatriaCityVerified\d*$/.test(key) || !value) continue;
+      const rows = typeof value.all === "function"
+        ? value.all()
+        : [];
       if (Array.isArray(rows)) cityQuestions.push(...rows);
     }
   } catch (error) {
@@ -93,7 +94,9 @@ for (const q of cityQuestions) {
     id: String(q.id), cityId: String(q.cityId), citySource: q.citySource || "verified", category: q.category || "gradovi",
     question: String(q.question || ""), answers, correctIndex: Number(q.correctIndex), sourceUrl: q.sourceUrl || null,
   };
-  if (normalized.question && answers.length === 4 && Number.isInteger(normalized.correctIndex) && normalized.correctIndex >= 0 && normalized.correctIndex <= 3) uniqueCities.set(`${normalized.cityId}::${normalized.id}`, normalized);
+  if (normalized.question && answers.length === 4 && Number.isInteger(normalized.correctIndex) && normalized.correctIndex >= 0 && normalized.correctIndex <= 3) {
+    uniqueCities.set(normalized.id, normalized);
+  }
 }
 
 const finalCityQuestions = [...uniqueCities.values()];
