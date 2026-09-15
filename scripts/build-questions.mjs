@@ -29,12 +29,7 @@ async function loadSource(url) {
 
 function prepareSource(source) {
   let prepared = source.replace(/([,{]\s*)([A-Za-z_$][\w$-]*-[\w$-]+)\s*:/g, "$1'$2':");
-
-  prepared = prepared.replace(
-    /\[f\[1\]\[0\],\.\.\.f\[1\]\[2\]\]/g,
-    "Array.isArray(f[1][2]) ? [f[1][0], ...f[1][2]] : (Array.isArray(f[1][1]) ? f[1][1] : [])",
-  );
-
+  prepared = prepared.replace(/\[f\[1\]\[0\],\.\.\.f\[1\]\[2\]\]/g, "Array.isArray(f[1][2]) ? [f[1][0], ...f[1][2]] : (Array.isArray(f[1][1]) ? f[1][1] : [])");
   return prepared;
 }
 
@@ -53,9 +48,7 @@ for (const url of SOURCES) {
 
 const questions = [];
 const extra = window.PATRIA_EXTRA_QUESTIONS || {};
-for (const bank of Object.values(extra)) {
-  if (Array.isArray(bank)) questions.push(...bank);
-}
+for (const bank of Object.values(extra)) if (Array.isArray(bank)) questions.push(...bank);
 if (Array.isArray(window.PATRIA_BASTINA)) questions.push(...window.PATRIA_BASTINA);
 if (Array.isArray(window.PATRIA_QUESTIONS)) questions.push(...window.PATRIA_QUESTIONS);
 
@@ -63,23 +56,11 @@ const unique = new Map();
 for (const q of questions) {
   if (!q || q.id == null) continue;
   const normalized = {
-    id: String(q.id),
-    category: q.category || "opce",
-    question: String(q.question || ""),
-    answers: Array.isArray(q.answers) ? q.answers.map(String) : [],
-    correctIndex: Number(q.correctIndex),
+    id: String(q.id), category: q.category || "opce", question: String(q.question || ""),
+    answers: Array.isArray(q.answers) ? q.answers.map(String) : [], correctIndex: Number(q.correctIndex),
   };
-  if (
-    normalized.question &&
-    normalized.answers.length === 4 &&
-    Number.isInteger(normalized.correctIndex) &&
-    normalized.correctIndex >= 0 &&
-    normalized.correctIndex <= 3
-  ) {
-    unique.set(normalized.id, normalized);
-  }
+  if (normalized.question && normalized.answers.length === 4 && Number.isInteger(normalized.correctIndex) && normalized.correctIndex >= 0 && normalized.correctIndex <= 3) unique.set(normalized.id, normalized);
 }
-
 const finalQuestions = [...unique.values()];
 
 const cityQuestions = [];
@@ -89,27 +70,14 @@ for (const url of CITY_SOURCES) {
     const source = prepareSource(await loadSource(url));
     const beforeKeys = new Set(Object.keys(window));
     vm.runInContext(source, context, { filename: url });
-
     const cityMatch = source.match(/(?:const|let|var)\s+city\s*=\s*['"]([^'"]+)['"]/);
     const sourceCity = cityMatch?.[1] || null;
-    const layerKeys = Object.keys(window).filter(
-      (key) => /^PatriaCityVerified\d*$/.test(key) && (!beforeKeys.has(key) || key === "PatriaCityVerified"),
-    );
-
-    if (!layerKeys.length) {
-      throw new Error("City layer nije registrirao PatriaCityVerified objekt.");
-    }
-
+    const layerKeys = Object.keys(window).filter((key) => /^PatriaCityVerified\d*$/.test(key) && (!beforeKeys.has(key) || key === "PatriaCityVerified"));
+    if (!layerKeys.length) throw new Error("City layer nije registrirao PatriaCityVerified objekt.");
     for (const key of layerKeys) {
       const value = window[key];
       if (!value) continue;
-
-      const rows = typeof value.all === "function"
-        ? value.all()
-        : typeof value.forCity === "function"
-          ? value.forCity(sourceCity)
-          : [];
-
+      const rows = typeof value.all === "function" ? value.all() : typeof value.forCity === "function" ? value.forCity(sourceCity) : [];
       if (Array.isArray(rows)) cityQuestions.push(...rows);
     }
   } catch (error) {
@@ -122,30 +90,15 @@ for (const q of cityQuestions) {
   if (!q || q.id == null || !q.cityId) continue;
   const answers = Array.isArray(q.answers) ? q.answers.map(String) : [];
   const normalized = {
-    id: String(q.id),
-    cityId: String(q.cityId),
-    citySource: q.citySource || "verified",
-    category: q.category || "gradovi",
-    question: String(q.question || ""),
-    answers,
-    correctIndex: Number(q.correctIndex),
-    sourceUrl: q.sourceUrl || null,
+    id: String(q.id), cityId: String(q.cityId), citySource: q.citySource || "verified", category: q.category || "gradovi",
+    question: String(q.question || ""), answers, correctIndex: Number(q.correctIndex), sourceUrl: q.sourceUrl || null,
   };
-  if (
-    normalized.question &&
-    answers.length === 4 &&
-    Number.isInteger(normalized.correctIndex) &&
-    normalized.correctIndex >= 0 &&
-    normalized.correctIndex <= 3
-  ) {
-    uniqueCities.set(`${normalized.cityId}::${normalized.id}`, normalized);
-  }
+  if (normalized.question && answers.length === 4 && Number.isInteger(normalized.correctIndex) && normalized.correctIndex >= 0 && normalized.correctIndex <= 3) uniqueCities.set(`${normalized.cityId}::${normalized.id}`, normalized);
 }
 
 const finalCityQuestions = [...uniqueCities.values()];
 const cityCounts = {};
 for (const q of finalCityQuestions) cityCounts[q.cityId] = (cityCounts[q.cityId] || 0) + 1;
-
 const completeCities = Object.entries(cityCounts).filter(([, count]) => count === 75);
 const incompleteCities = Object.entries(cityCounts).filter(([, count]) => count < 75);
 const oversizedCities = Object.entries(cityCounts).filter(([, count]) => count > 75);
@@ -156,37 +109,20 @@ console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
 console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
 console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
 console.log(`Gradova s vise od 75 pitanja: ${oversizedCities.length}`);
+if (incompleteCities.length) console.log(`NEDOSTAJU: ${incompleteCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
+if (oversizedCities.length) console.log(`VIŠAK: ${oversizedCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
 
 if (skippedCitySources.length) {
   console.warn(`Preskoceno neispravnih city layera: ${skippedCitySources.length}`);
   for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
 }
 
-if (
-  skippedCitySources.length ||
-  Object.keys(cityCounts).length !== 127 ||
-  finalCityQuestions.length !== 9525 ||
-  completeCities.length !== 127 ||
-  incompleteCities.length !== 0 ||
-  oversizedCities.length !== 0
-) {
-  throw new Error(
-    `City audit nije prosao: ocekivano 127 gradova i 9525 pitanja (75 po gradu), dobiveno ${Object.keys(cityCounts).length} gradova i ${finalCityQuestions.length} pitanja.`,
-  );
+if (skippedCitySources.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
+  throw new Error(`City audit nije prosao: ocekivano 127 gradova i 9525 pitanja (75 po gradu), dobiveno ${Object.keys(cityCounts).length} gradova i ${finalCityQuestions.length} pitanja.`);
 }
 
 await fs.mkdir(dataDir, { recursive: true });
-await fs.writeFile(
-  output,
-  `// GENERATED FILE. Source: PatriaSoul/patriasoul canonical question banks.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const QUESTIONS = ${JSON.stringify(finalQuestions, null, 2)};\n`,
-  "utf8",
-);
-
-await fs.writeFile(
-  cityOutput,
-  `// GENERATED FILE. Source: PatriaSoul/patriasoul verified Brani svoj grad layers.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const CITY_QUESTIONS = ${JSON.stringify(finalCityQuestions, null, 2)};\n`,
-  "utf8",
-);
-
+await fs.writeFile(output, `// GENERATED FILE. Source: PatriaSoul/patriasoul canonical question banks.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const QUESTIONS = ${JSON.stringify(finalQuestions, null, 2)};\n`, "utf8");
+await fs.writeFile(cityOutput, `// GENERATED FILE. Source: PatriaSoul/patriasoul verified Brani svoj grad layers.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const CITY_QUESTIONS = ${JSON.stringify(finalCityQuestions, null, 2)};\n`, "utf8");
 console.log(`Generirano: ${output}`);
 console.log(`Generirano: ${cityOutput}`);
