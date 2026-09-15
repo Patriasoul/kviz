@@ -1,4 +1,4 @@
--- PatriaSoul admin: controlled result cancellation and progression rebuild.
+-- PatriaSoul admin: user dashboard, account overview, result control and progression rebuild.
 -- Run this once in Supabase SQL Editor after schema.sql and progression.sql.
 
 alter table public.profiles
@@ -85,6 +85,36 @@ as $$ begin
 end; $$;
 revoke all on function public.admin_list_quiz_results() from public,anon;
 grant execute on function public.admin_list_quiz_results() to authenticated;
+
+create or replace function public.admin_list_users()
+returns table(id uuid,email text,display_name text,role text,created_at timestamptz,last_sign_in_at timestamptz,total_quizzes bigint,total_xp bigint,last_quiz_at timestamptz)
+language plpgsql security definer stable set search_path=''
+as $$ begin
+  if not public.is_admin() then raise exception 'Niste administrator.'; end if;
+  return query
+  select u.id,u.email::text,coalesce(nullif(p.display_name,''),'Igrač'),coalesce(p.role,'player'),u.created_at,u.last_sign_in_at,
+    coalesce((select count(*) from public.quiz_results r where r.user_id=u.id),0),
+    coalesce((select sum(pp.xp) from public.player_progress pp where pp.user_id=u.id),0),
+    (select max(r.created_at) from public.quiz_results r where r.user_id=u.id)
+  from auth.users u left join public.profiles p on p.id=u.id order by u.created_at desc;
+end; $$;
+revoke all on function public.admin_list_users() from public,anon;
+grant execute on function public.admin_list_users() to authenticated;
+
+create or replace function public.admin_dashboard_stats()
+returns table(total_users bigint,active_users_30d bigint,total_results bigint,results_30d bigint,total_xp bigint)
+language plpgsql security definer stable set search_path=''
+as $$ begin
+  if not public.is_admin() then raise exception 'Niste administrator.'; end if;
+  return query select
+    (select count(*) from auth.users),
+    (select count(*) from auth.users where last_sign_in_at >= now()-interval '30 days'),
+    (select count(*) from public.quiz_results),
+    (select count(*) from public.quiz_results where created_at >= now()-interval '30 days'),
+    (select coalesce(sum(xp),0) from public.player_progress);
+end; $$;
+revoke all on function public.admin_dashboard_stats() from public,anon;
+grant execute on function public.admin_dashboard_stats() to authenticated;
 
 create or replace function public.admin_delete_quiz_result(p_result_id uuid)
 returns json language plpgsql security definer set search_path=''
