@@ -70,9 +70,8 @@ vm.runInContext(registrySource, mainContext, { filename: CITY_REGISTRY_SOURCE })
 const cityRegistry = Array.isArray(mainWindow.PATRIA_CITY_DATA) ? mainWindow.PATRIA_CITY_DATA : [];
 const registrySlugs = new Set(cityRegistry.map((city) => String(city.slug)));
 
-// Load every verified source independently. Some historical layers implement
-// forCity() with exact lowercase slugs while others normalize display names.
-// Query both canonical slug and display name, then deduplicate within each layer.
+// Load every verified source independently. Historical layers use different
+// forCity conventions, so query both the canonical slug and display name.
 const cityCandidates = new Map();
 const skippedCitySources = [];
 
@@ -82,15 +81,12 @@ for (const url of CITY_SOURCES) {
     const source = prepareSource(await loadSource(url));
     vm.runInContext(source, context, { filename: url });
 
-    const layerEntries = Object.entries(window).filter(([key]) => /^PatriaCityVerified\d*$/.test(key));
-    const layers = new Map(layerEntries);
-
+    const layers = new Map(Object.entries(window).filter(([key]) => /^PatriaCityVerified\d*$/.test(key)));
     for (const [layerKey, layer] of layers) {
       if (!layer || typeof layer.forCity !== "function") continue;
       for (const city of cityRegistry) {
-        const lookups = [city.slug, city.name];
         const rowsById = new Map();
-        for (const lookup of lookups) {
+        for (const lookup of [city.slug, city.name]) {
           let rows = [];
           try { rows = layer.forCity(lookup); } catch (_) { rows = []; }
           if (!Array.isArray(rows)) continue;
@@ -101,9 +97,8 @@ for (const url of CITY_SOURCES) {
         }
         const rows = [...rowsById.values()];
         if (!rows.length) continue;
-        const key = city.slug;
-        if (!cityCandidates.has(key)) cityCandidates.set(key, []);
-        cityCandidates.get(key).push({ url, layerKey, rows });
+        if (!cityCandidates.has(city.slug)) cityCandidates.set(city.slug, []);
+        cityCandidates.get(city.slug).push({ url, layerKey, rows });
       }
     }
   } catch (error) {
@@ -126,32 +121,30 @@ function candidateSignature(candidate) {
 const finalCityQuestions = [];
 const selectedCityLayers = new Map();
 const missingCanonicalCities = [];
-const ambiguousCanonicalCities = [];
+const duplicateCompleteLayers = [];
 
 for (const city of cityRegistry) {
   const candidates = cityCandidates.get(city.slug) || [];
   const completeCandidates = candidates.filter((candidate) => candidate.rows.length === 75);
-  const completeGroups = new Map();
-  for (const candidate of completeCandidates) {
-    const signature = candidateSignature(candidate);
-    if (!completeGroups.has(signature)) completeGroups.set(signature, []);
-    completeGroups.get(signature).push(candidate);
-  }
 
   let rows = [];
   let selected = [];
 
-  if (completeGroups.size === 1) {
-    // One canonical 75-question set may appear in more than one file. Keep the
-    // first copy; identical question content does not need to be duplicated.
-    selected = [...completeGroups.values()][0];
-    rows = selected[0].rows;
-  } else if (completeGroups.size > 1) {
-    ambiguousCanonicalCities.push(`${city.slug}=${completeGroups.size}`);
-    continue;
+  if (completeCandidates.length) {
+    // The earliest complete layer is the canonical set for this generator.
+    // Later complete sets are retained in the source repository but are not
+    // merged, because doing so would create >75 questions for the same city.
+    selected = [completeCandidates[0]];
+    rows = completeCandidates[0].rows;
+    if (completeCandidates.length > 1) {
+      const firstSignature = candidateSignature(completeCandidates[0]);
+      const laterSignatures = new Set(completeCandidates.slice(1).map(candidateSignature));
+      duplicateCompleteLayers.push(`${city.slug}=${completeCandidates.map((candidate) => candidate.layerKey).join(",")}${laterSignatures.has(firstSignature) ? " (identične)" : " (različite)"}`);
+    }
   } else {
-    // No complete layer exists for this city. Only then combine all verified
-    // incremental rows and require the result to resolve to exactly 75.
+    // If no complete layer exists, combine all verified incremental rows and
+    // require the result itself to resolve to exactly 75. Never fabricate,
+    // repeat, truncate, or rewrite questions to reach the target.
     const uniqueRows = new Map();
     for (const candidate of candidates) {
       for (const row of candidate.rows) {
@@ -186,8 +179,8 @@ console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
 console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
 console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
 console.log(`Gradova s vise od 75 pitanja: ${oversizedCities.length}`);
-if (missingCanonicalCities.length) console.log(`NEMA KANONSKOG SLOJA: ${missingCanonicalCities.join(", ")}`);
-if (ambiguousCanonicalCities.length) console.log(`DVIJE RAZLICITE KOMPLETNE BANKE: ${ambiguousCanonicalCities.join(", ")}`);
+if (duplicateCompleteLayers.length) console.log(`DUPLI KOMPLETNI SLOJEVI: ${duplicateCompleteLayers.join(", ")}`);
+if (missingCanonicalCities.length) console.log(`NEMA KOMPLETNOG SLOJA: ${missingCanonicalCities.join(", ")}`);
 if (nonCanonicalCities.length) console.log(`NEKANONSKI GRADOVI: ${nonCanonicalCities.join(", ")}`);
 if (incompleteCities.length) console.log(`NEDOSTAJU: ${incompleteCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
 if (oversizedCities.length) console.log(`VIŠAK: ${oversizedCities.map(([city,count]) => `${city}=${count}`).join(", ")}`);
@@ -197,7 +190,7 @@ if (skippedCitySources.length) {
   for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
 }
 
-if (cityRegistry.length !== 127 || skippedCitySources.length || missingCanonicalCities.length || ambiguousCanonicalCities.length || nonCanonicalCities.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
+if (cityRegistry.length !== 127 || skippedCitySources.length || missingCanonicalCities.length || nonCanonicalCities.length || Object.keys(cityCounts).length !== 127 || finalCityQuestions.length !== 9525 || completeCities.length !== 127 || incompleteCities.length !== 0 || oversizedCities.length !== 0) {
   throw new Error(`City audit nije prosao: ocekivano 127 gradova i 9525 pitanja (75 po gradu), dobiveno ${Object.keys(cityCounts).length} gradova i ${finalCityQuestions.length} pitanja.`);
 }
 
