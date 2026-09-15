@@ -1,0 +1,21 @@
+{
+  "name": "PatriaSoul — Hrvatski kviz",
+  "short_name": "PatriaSoul",
+  "description": "PatriaSoul — hrvatsko znanje, povijest, baština i kvizovi.",
+  "lang": "hr",
+  "start_url": "/kviz/",
+  "scope": "/kviz/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#f7f8fa",
+  "theme_color": "#193452",
+  "icons": [
+    {
+      "src": "/kviz/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
