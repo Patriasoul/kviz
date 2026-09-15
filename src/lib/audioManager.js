@@ -3,8 +3,34 @@ let musicTimer = null;
 let musicGain = null;
 let musicRunning = false;
 let entrancePlayed = false;
+let musicAudio = null;
+let activeTrack = null;
 
 const STORAGE_KEY = "patriasoul-audio-enabled";
+
+export const AUDIO_TRACKS = {
+  croatian: {
+    title: "Legionnaire",
+    artist: "Scott Buckley",
+    file: "legionnaire.mp3",
+    src: `${import.meta.env.BASE_URL}audio/legionnaire.mp3`,
+    credit: "'Legionnaire (Original)' by Scott Buckley - released under CC-BY 4.0. www.scottbuckley.com.au",
+  },
+  city: {
+    title: "Dystopia",
+    artist: "Per Kiilstofte / Machinimasound",
+    file: "dystopia.mp3",
+    src: `${import.meta.env.BASE_URL}audio/dystopia.mp3`,
+    credit: "Music: Dystopia by Per Kiilstofte / Machinimasound — https://machinimasound.com",
+  },
+  daily: {
+    title: "The Constellation",
+    artist: "Hayden Folker",
+    file: "the-constellation.mp3",
+    src: `${import.meta.env.BASE_URL}audio/the-constellation.mp3`,
+    credit: "The Constellation by Hayden Folker | https://soundcloud.com/hayden-folker | CC BY 3.0",
+  },
+};
 
 function getEnabled() {
   try {
@@ -23,6 +49,10 @@ export function setAudioEnabled(enabled) {
     localStorage.setItem(STORAGE_KEY, enabled ? "on" : "off");
   } catch {}
   if (!enabled) stopMusic();
+}
+
+export function getAudioTrack(quizType = "croatian") {
+  return AUDIO_TRACKS[quizType] ?? AUDIO_TRACKS.croatian;
 }
 
 function ensureContext() {
@@ -45,27 +75,23 @@ async function resumeContext() {
 function tone({ frequency, duration = 0.12, type = "sine", volume = 0.035, delay = 0, slideTo }) {
   const ctx = audioContext;
   if (!ctx || !getEnabled()) return;
-
   const oscillator = ctx.createOscillator();
   const gain = ctx.createGain();
   const start = ctx.currentTime + delay;
   const end = start + duration;
-
   oscillator.type = type;
   oscillator.frequency.setValueAtTime(frequency, start);
   if (slideTo) oscillator.frequency.exponentialRampToValueAtTime(slideTo, end);
-
   gain.gain.setValueAtTime(0.0001, start);
   gain.gain.exponentialRampToValueAtTime(volume, start + Math.min(0.02, duration / 4));
   gain.gain.exponentialRampToValueAtTime(0.0001, end);
-
   oscillator.connect(gain);
   gain.connect(ctx.destination);
   oscillator.start(start);
   oscillator.stop(end + 0.03);
 }
 
-export async function startAudio() {
+export async function startAudio(quizType = "croatian") {
   if (!getEnabled()) return false;
   const ctx = await resumeContext();
   if (!ctx) return false;
@@ -73,31 +99,61 @@ export async function startAudio() {
     playEntrance();
     entrancePlayed = true;
   }
-  startMusic();
+  await startMusic(quizType);
   return true;
 }
 
-export async function startMusic() {
+export async function startMusic(quizType = "croatian") {
+  if (!getEnabled()) return;
+  const track = getAudioTrack(quizType);
+  if (activeTrack === quizType && musicAudio) {
+    if (musicAudio.paused) {
+      try { await musicAudio.play(); } catch {}
+    }
+    return;
+  }
+  stopMusic();
+  activeTrack = quizType;
+
+  if (typeof window !== "undefined" && typeof Audio !== "undefined") {
+    const player = new Audio(track.src);
+    player.loop = true;
+    player.preload = "auto";
+    player.volume = 0.16;
+    player.addEventListener("error", () => {
+      musicAudio = null;
+      activeTrack = null;
+      startGeneratedMusic();
+    }, { once: true });
+    musicAudio = player;
+    try {
+      await player.play();
+      musicRunning = true;
+      return;
+    } catch {
+      musicAudio = null;
+      activeTrack = null;
+    }
+  }
+  startGeneratedMusic();
+}
+
+async function startGeneratedMusic() {
   if (musicRunning || !getEnabled()) return;
   const ctx = await resumeContext();
   if (!ctx) return;
-
   musicRunning = true;
   musicGain = ctx.createGain();
   musicGain.gain.value = 0.008;
   musicGain.connect(ctx.destination);
-
-  // Fallback ambient motif until licensed MP3 themes are supplied.
   const notes = [196, 246.94, 293.66, 392, 293.66, 246.94, 220, 261.63];
   let step = 0;
-
   const playStep = () => {
-    if (!musicRunning || !getEnabled()) return;
+    if (!musicRunning || !getEnabled() || musicAudio) return;
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     const now = ctx.currentTime;
     const note = notes[step % notes.length];
-
     oscillator.type = "sine";
     oscillator.frequency.setValueAtTime(note, now);
     gain.gain.setValueAtTime(0.0001, now);
@@ -110,12 +166,16 @@ export async function startMusic() {
     step += 1;
     musicTimer = window.setTimeout(playStep, 1500);
   };
-
   playStep();
 }
 
 export function stopMusic() {
   musicRunning = false;
+  activeTrack = null;
+  if (musicAudio) {
+    try { musicAudio.pause(); musicAudio.currentTime = 0; } catch {}
+    musicAudio = null;
+  }
   if (musicTimer) {
     window.clearTimeout(musicTimer);
     musicTimer = null;
@@ -172,10 +232,5 @@ export function playBadge() {
 }
 
 export function playCountdownTick(finalTick = false) {
-  tone({
-    frequency: finalTick ? 880 : 660,
-    duration: finalTick ? 0.16 : 0.08,
-    type: finalTick ? "square" : "triangle",
-    volume: finalTick ? 0.035 : 0.018,
-  });
+  tone({ frequency: finalTick ? 880 : 660, duration: finalTick ? 0.16 : 0.08, type: finalTick ? "square" : "triangle", volume: finalTick ? 0.035 : 0.018 });
 }
