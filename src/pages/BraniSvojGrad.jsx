@@ -61,7 +61,7 @@ export default function BraniSvojGrad({ onBack, onStart }) {
     return [...grouped.values()]
       .map((city) => ({
         ...city,
-        complete: true,
+        complete: city.count === TARGET_QUESTIONS,
       }))
       .filter(
         (city) =>
@@ -71,6 +71,8 @@ export default function BraniSvojGrad({ onBack, onStart }) {
       )
       .sort((a, b) => a.name.localeCompare(b.name, "hr"));
   }, [search]);
+
+  const completeCities = cities.filter((city) => city.complete).length;
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
@@ -86,10 +88,10 @@ export default function BraniSvojGrad({ onBack, onStart }) {
             Odaberi svoj grad
           </h1>
           <p className="mt-4 max-w-2xl text-primary-foreground/75">
-            Svi hrvatski gradovi su otključani. Svaki grad igra se s kompletnim paketom od 75 pitanja.
+            Svaki grad dobiva točno 75 stvarnih pitanja. Grad se označava kao spreman tek kada svih 75 pitanja prođe provjeru.
           </p>
           <p className="mt-4 text-sm font-semibold text-red-200">
-            Gradova dostupnih za igru: {cities.length}
+            Gradovi s kompletnim paketom: {completeCities} / {cities.length}
           </p>
         </div>
 
@@ -109,8 +111,11 @@ export default function BraniSvojGrad({ onBack, onStart }) {
           {cities.map((city) => (
             <button
               key={city.slug}
-              onClick={() => onStart(city.slug, city.name)}
-              className="patria-card group overflow-hidden text-left transition hover:-translate-y-0.5"
+              onClick={() => city.complete && onStart(city.slug, city.name)}
+              disabled={!city.complete}
+              className={`patria-card group overflow-hidden text-left transition ${
+                city.complete ? "hover:-translate-y-0.5" : "cursor-not-allowed opacity-70"
+              }`}
             >
               <div className="relative h-32 overflow-hidden bg-white">
                 <CityFlag cityName={city.name} />
@@ -126,9 +131,9 @@ export default function BraniSvojGrad({ onBack, onStart }) {
               <div className="p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold">{TARGET_QUESTIONS} / {TARGET_QUESTIONS} pitanja</p>
-                    <p className="mt-2 text-xs font-bold uppercase tracking-wide text-accent">
-                      Spremno za igru
+                    <p className="text-sm font-semibold">{city.count} / {TARGET_QUESTIONS} pitanja</p>
+                    <p className={`mt-2 text-xs font-bold uppercase tracking-wide ${city.complete ? "text-accent" : "text-muted-foreground"}`}>
+                      {city.complete ? "Spremno za igru" : "U pripremi"}
                     </p>
                   </div>
                   <ArrowRight className="h-5 w-5 text-muted-foreground transition group-hover:translate-x-1" />
