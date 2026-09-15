@@ -143,6 +143,37 @@ for (const q of cityQuestions) {
 }
 
 const finalCityQuestions = [...uniqueCities.values()];
+const cityCounts = {};
+for (const q of finalCityQuestions) cityCounts[q.cityId] = (cityCounts[q.cityId] || 0) + 1;
+
+const completeCities = Object.entries(cityCounts).filter(([, count]) => count === 75);
+const incompleteCities = Object.entries(cityCounts).filter(([, count]) => count < 75);
+const oversizedCities = Object.entries(cityCounts).filter(([, count]) => count > 75);
+
+console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
+console.log(`Brani svoj grad pitanja: ${finalCityQuestions.length}`);
+console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
+console.log(`Gradova s tocno 75 pitanja: ${completeCities.length}`);
+console.log(`Gradova s manje od 75 pitanja: ${incompleteCities.length}`);
+console.log(`Gradova s vise od 75 pitanja: ${oversizedCities.length}`);
+
+if (skippedCitySources.length) {
+  console.warn(`Preskoceno neispravnih city layera: ${skippedCitySources.length}`);
+  for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
+}
+
+if (
+  skippedCitySources.length ||
+  Object.keys(cityCounts).length !== 127 ||
+  finalCityQuestions.length !== 9525 ||
+  completeCities.length !== 127 ||
+  incompleteCities.length !== 0 ||
+  oversizedCities.length !== 0
+) {
+  throw new Error(
+    `City audit nije prosao: ocekivano 127 gradova i 9525 pitanja (75 po gradu), dobiveno ${Object.keys(cityCounts).length} gradova i ${finalCityQuestions.length} pitanja.`,
+  );
+}
 
 await fs.mkdir(dataDir, { recursive: true });
 await fs.writeFile(
@@ -157,18 +188,5 @@ await fs.writeFile(
   "utf8",
 );
 
-const cityCounts = {};
-for (const q of finalCityQuestions) cityCounts[q.cityId] = (cityCounts[q.cityId] || 0) + 1;
-
-console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
-console.log(`Brani svoj grad pitanja: ${finalCityQuestions.length}`);
-console.log(`Gradova s pitanjima: ${Object.keys(cityCounts).length}`);
-console.log(`Gradova s tocno 75 pitanja: ${Object.values(cityCounts).filter((count) => count === 75).length}`);
-console.log(`Gradova s manje od 75 pitanja: ${Object.values(cityCounts).filter((count) => count < 75).length}`);
-console.log(`Gradova s vise od 75 pitanja: ${Object.values(cityCounts).filter((count) => count > 75).length}`);
-if (skippedCitySources.length) {
-  console.warn(`Preskoceno neispravnih city layera: ${skippedCitySources.length}`);
-  for (const item of skippedCitySources) console.warn(`- ${item.url}: ${item.message}`);
-}
 console.log(`Generirano: ${output}`);
 console.log(`Generirano: ${cityOutput}`);
