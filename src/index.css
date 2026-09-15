@@ -53,14 +53,18 @@
   }
 
   * { border-color: hsl(var(--border)); outline-color: hsl(var(--ring)); }
-  html { scroll-behavior: smooth; }
-  body { background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--font-body); min-height: 100vh; }
+  html { scroll-behavior: smooth; min-height: 100%; }
+  body { background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--font-body); min-height: 100vh; margin: 0; overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
   h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 700; letter-spacing: -0.015em; }
   p { line-height: 1.7; }
   a { transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease; }
-  button { transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease; }
+  button { transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease; touch-action: manipulation; }
   ::selection { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
   :focus-visible { outline: 2px solid hsl(var(--accent)); outline-offset: 3px; }
+
+  @supports (padding: env(safe-area-inset-top)) {
+    body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  }
 }
 
 @layer components {
@@ -70,22 +74,47 @@
   .patria-checker { background-image: linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%), linear-gradient(45deg, rgba(255,255,255,.035) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.035) 75%); background-position: 0 0, 8px 8px; background-size: 16px 16px; }
   .patria-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: .5rem; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
   .patria-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(15,35,60,.08); }
-  .patria-button, .patria-button-accent { display: inline-flex; align-items: center; justify-content: center; border-radius: .375rem; padding: .625rem 1.25rem; font-weight: 500; }
+  .patria-button, .patria-button-accent { display: inline-flex; align-items: center; justify-content: center; border-radius: .375rem; padding: .625rem 1.25rem; font-weight: 500; min-height: 44px; }
   .patria-button { background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
   .patria-button:hover { transform: translateY(-1px); }
   .patria-button-accent { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
   .patria-button-accent:hover { transform: translateY(-1px); }
-  .quiz-answer { width: 100%; text-align: left; border-radius: .375rem; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); padding: 1rem; transition: background-color .18s ease, border-color .18s ease, transform .18s ease; }
+  .quiz-answer { width: 100%; text-align: left; border-radius: .375rem; border: 1px solid hsl(var(--border)); background: hsl(var(--card)); padding: 1rem; min-height: 52px; transition: background-color .18s ease, border-color .18s ease, transform .18s ease; }
   .quiz-answer:hover { transform: translateX(2px); }
   .quiz-answer.correct { background: hsl(145 45% 95%); border-color: hsl(145 45% 42%); }
   .quiz-answer.incorrect { background: hsl(351 55% 96%); border-color: hsl(351 55% 55%); }
 
-  /* Naslovnica: glavni gumb Hrvatskog kviza stoji ispod naslova/opisa, a ne lijevo od njega. */
   section.border-b .patria-button-accent:first-child { flex-basis: 100%; width: fit-content; }
+
+  .patria-install-button {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 1000;
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    min-height: 46px;
+    padding: .7rem 1rem;
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 999px;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 12px 32px rgba(15,35,60,.28);
+    font-size: .875rem;
+    font-weight: 700;
+  }
+  .patria-install-button:hover { transform: translateY(-2px); background: hsl(var(--accent)); }
 }
 
 @media (max-width: 640px) {
   body { font-size: .95rem; }
   h1 { line-height: 1.15; }
   h2 { line-height: 1.2; }
+  .patria-install-button { left: 16px; right: 16px; justify-content: center; }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  body { font-size: .9rem; }
+  .patria-install-button { bottom: 10px; }
 }
