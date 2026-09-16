@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import vm from "node:vm";
+import { pathToFileURL } from "node:url";
 
 const MAIN_REPO = "https://raw.githubusercontent.com/Patriasoul/patriasoul/main";
 const SOURCES = [
@@ -18,6 +19,7 @@ const CITY_SOURCES = [
 
 const root = process.cwd();
 const dataDir = path.join(root, "src", "data");
+const onlineSource = path.join(dataDir, "cityQuestions.online.js");
 const output = path.join(dataDir, "questions.generated.js");
 const cityOutput = path.join(dataDir, "cityQuestions.generated.js");
 const auditOutput = path.join(dataDir, "cityQuestions.audit.json");
@@ -104,6 +106,9 @@ for (const url of CITY_SOURCES) {
   }
 }
 
+const onlineModule = await import(pathToFileURL(onlineSource).href);
+const onlineQuestions = Array.isArray(onlineModule.CITY_ONLINE_QUESTIONS) ? onlineModule.CITY_ONLINE_QUESTIONS : [];
+
 function normalizeText(value) {
   return String(value || "")
     .toLocaleLowerCase("hr-HR")
@@ -125,13 +130,13 @@ function questionTextSignature(row) {
   return normalizeText(row.question);
 }
 
-function assembleCity(city, candidates) {
+function assembleCity(city, candidates, onlinePool) {
   const byId = new Map();
   const byText = new Map();
   const provenance = new Map();
+  const sourceRows = [];
 
-  // First pass: every verified question is retained. Same ID is one question;
-  // same question text with equivalent answers is also one question.
+  // First pass: retain every existing verified question exactly as supplied.
   for (const candidate of candidates) {
     for (const row of candidate.rows) {
       const id = String(row.id);
@@ -147,13 +152,41 @@ function assembleCity(city, candidates) {
         provenance.get(duplicateId)?.push(candidate.layerKey);
         continue;
       }
-      // A question with the same wording but different answer data is NOT
-      // silently discarded. It remains a distinct candidate for manual audit.
       byId.set(id, row);
       provenance.set(id, [candidate.layerKey]);
       if (!byText.has(textSignature)) byText.set(textSignature, []);
       byText.get(textSignature).push(id);
     }
+  }
+
+  // Second pass: only fill a deficit, using locally researched questions from
+  // src/data/cityQuestions.online.js. Never replace or rewrite verified rows.
+  const onlineAdded = [];
+  for (const row of onlinePool) {
+    if (byId.size >= TARGET_PER_CITY) break;
+    const id = String(row.id || "");
+    if (!id || row.cityId !== city.slug || row.citySource !== "online") continue;
+    if (!row.sourceUrl || !row.question || !Array.isArray(row.answers) || row.answers.length !== 4) continue;
+    if (!Number.isInteger(Number(row.correctIndex)) || Number(row.correctIndex) < 0 || Number(row.correctIndex) > 3) continue;
+    const signature = questionSignature(row);
+    const textSignature = questionTextSignature(row);
+    if (byId.has(id)) continue;
+    if ([...byId.values()].some((existing) => questionSignature(existing) === signature)) continue;
+    if ([...byText.keys()].includes(textSignature)) continue;
+    const normalized = {
+      ...row,
+      id,
+      cityId: city.slug,
+      citySource: "online",
+      category: row.category || "gradovi",
+      answers: row.answers.map(String),
+      correctIndex: Number(row.correctIndex),
+      sourceUrl: String(row.sourceUrl),
+    };
+    byId.set(id, normalized);
+    provenance.set(id, ["online"]);
+    byText.set(textSignature, [id]);
+    onlineAdded.push(normalized);
   }
 
   const all = [...byId.values()];
@@ -162,12 +195,12 @@ function assembleCity(city, candidates) {
     .filter(([, ids]) => ids.length > 1)
     .map(([text, ids]) => ({ text, ids, questions: ids.map((id) => byId.get(id)) }));
 
-  // If the assembled verified pool is already exactly 75, use it untouched.
-  // If it is below/above 75, fail with a complete audit instead of silently
-  // choosing arbitrary questions. This protects the source bank from loss.
+  const verifiedCount = all.filter((row) => row.citySource === "verified").length;
   return {
     city: { slug: city.slug, name: city.name },
     count: all.length,
+    verifiedCount,
+    onlineAdded: onlineAdded.length,
     questions: all,
     exactDuplicates: exactDuplicates.map((row) => ({ id: row.id, layers: provenance.get(String(row.id)) })),
     textCollisions,
@@ -177,7 +210,7 @@ function assembleCity(city, candidates) {
 
 const audit = [];
 for (const city of cityRegistry) {
-  audit.push(assembleCity(city, cityCandidates.get(city.slug) || []));
+  audit.push(assembleCity(city, cityCandidates.get(city.slug) || [], onlineQuestions));
 }
 
 const completeAudits = audit.filter((entry) => entry.count === TARGET_PER_CITY);
@@ -185,15 +218,16 @@ const incompleteAudits = audit.filter((entry) => entry.count < TARGET_PER_CITY);
 const oversizedAudits = audit.filter((entry) => entry.count > TARGET_PER_CITY);
 
 console.log(`PatriaSoul pitanja: ${finalQuestions.length}`);
+console.log(`Online supplement pitanja: ${onlineQuestions.length}`);
 console.log(`Gradova u registru: ${cityRegistry.length}`);
 console.log(`Gradova s tocno 75 nakon deduplikacije: ${completeAudits.length}`);
 console.log(`Gradova ispod 75: ${incompleteAudits.length}`);
 console.log(`Gradova iznad 75: ${oversizedAudits.length}`);
-if (incompleteAudits.length) console.log(`ISPOD: ${incompleteAudits.map((x) => `${x.city.slug}=${x.count}`).join(", ")}`);
+if (incompleteAudits.length) console.log(`ISPOD: ${incompleteAudits.map((x) => `${x.city.slug}=${x.count} (online +${x.onlineAdded})`).join(", ")}`);
 if (oversizedAudits.length) console.log(`IZNAD: ${oversizedAudits.map((x) => `${x.city.slug}=${x.count}`).join(", ")}`);
 
 for (const entry of audit.filter((x) => x.city.slug === "omis" || x.city.slug === "sinj" || x.city.slug === "sibenik" || x.city.slug === "trilj")) {
-  console.log(`AUDIT ${entry.city.name}: ${entry.count}/75; slojevi=${entry.layers.map((x) => `${x.layer}:${x.count}`).join(",")}; istiID=${entry.exactDuplicates.length}; tekstualniSukobi=${entry.textCollisions.length}`);
+  console.log(`AUDIT ${entry.city.name}: ${entry.count}/75; verified=${entry.verifiedCount}; online=${entry.onlineAdded}; slojevi=${entry.layers.map((x) => `${x.layer}:${x.count}`).join(",")}; istiID=${entry.exactDuplicates.length}; tekstualniSukobi=${entry.textCollisions.length}`);
 }
 
 await fs.mkdir(dataDir, { recursive: true });
@@ -202,14 +236,13 @@ await fs.writeFile(auditOutput, JSON.stringify({
   targetPerCity: TARGET_PER_CITY,
   targetTotal: TARGET_TOTAL,
   generatedAt: new Date().toISOString(),
-  skippedCitySources,
+  onlineSupplementCount: onlineQuestions.length,
   cities: audit,
+  skippedCitySources,
 }, null, 2), "utf8");
 
-// Never generate a partial city bank. The build stops until every city has an
-// auditable 75-question canonical set. Existing source questions are untouched.
 if (cityRegistry.length !== TARGET_CITIES || skippedCitySources.length || completeAudits.length !== TARGET_CITIES || incompleteAudits.length || oversizedAudits.length) {
-  throw new Error(`City audit nije zavrsen: ${completeAudits.length}/${TARGET_CITIES} gradova ima tocno 75 nakon deduplikacije. Detaljan audit: ${auditOutput}`);
+  throw new Error(`City audit nije zavrsen: ${completeAudits.length}/${TARGET_CITIES} gradova ima tocno 75 nakon verified + online nadopune. Detaljan audit: ${auditOutput}`);
 }
 
 const finalCityQuestions = audit.flatMap((entry) => entry.questions);
@@ -218,7 +251,7 @@ if (finalCityQuestions.length !== TARGET_TOTAL) {
 }
 
 await fs.writeFile(output, `// GENERATED FILE. Source: PatriaSoul/patriasoul canonical question banks.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const QUESTIONS = ${JSON.stringify(finalQuestions, null, 2)};\n`, "utf8");
-await fs.writeFile(cityOutput, `// GENERATED FILE. Source: PatriaSoul/patriasoul verified Brani svoj grad layers.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const CITY_QUESTIONS = ${JSON.stringify(finalCityQuestions, null, 2)};\n`, "utf8");
+await fs.writeFile(cityOutput, `// GENERATED FILE. Source: PatriaSoul/patriasoul verified layers + online researched supplements.\n// Do not edit manually. Run the quiz build to regenerate.\nexport const CITY_QUESTIONS = ${JSON.stringify(finalCityQuestions, null, 2)};\n`, "utf8");
 console.log(`Generirano: ${output}`);
 console.log(`Generirano: ${cityOutput}`);
 console.log(`Generiran audit: ${auditOutput}`);
