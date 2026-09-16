@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "questions": "node scripts/build-questions.mjs",
+    "questions": "node scripts/merge-city-online-supplements.mjs && node scripts/build-questions.mjs",
     "dev": "npm run questions && vite",
     "build": "npm run questions && vite build",
     "preview": "vite preview"
