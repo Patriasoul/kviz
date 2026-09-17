@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "questions": "node scripts/build-questions.mjs",
+    "import:cities": "node scripts/import-city-bank.mjs",
     "dev": "npm run questions && vite",
     "build": "npm run questions && vite build",
     "preview": "vite preview"
