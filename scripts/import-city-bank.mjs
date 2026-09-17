@@ -48,8 +48,9 @@ const cityIdBySlug = new Map((dbCities || []).map((city) => [String(city.slug), 
 const missingCities = cityRows.filter((city) => !cityIdBySlug.has(city.slug));
 if (missingCities.length) throw new Error(`Nedostaju gradovi u public.cities: ${missingCities.map((city) => city.slug).join(", ")}`);
 
-// DB unique key is (city_id, question). Deduplicate before upsert so one batch
-// can never contain two rows targeting the same constrained value.
+// Collect every verified question first. The source files are layered over time;
+// the latest layer is the final 75-question bank for a city. Keeping the last
+// 75 encountered prevents older/test layers from being imported alongside it.
 const questionMap = new Map();
 let duplicateQuestionRows = 0;
 let sourceFailures = 0;
@@ -84,6 +85,7 @@ for (const url of citySources) {
             }
 
             questionMap.set(key, {
+              city_slug: city.slug,
               city_id: cityIdBySlug.get(city.slug),
               question,
               answer_a: String(row.answers[0]),
@@ -105,11 +107,25 @@ for (const url of citySources) {
   }
 }
 
-const rows = [...questionMap.values()];
+const grouped = new Map();
+for (const row of questionMap.values()) {
+  if (!grouped.has(row.city_slug)) grouped.set(row.city_slug, []);
+  grouped.get(row.city_slug).push(row);
+}
+
+const rows = [];
+const underfilledCities = [];
+for (const city of cityRows) {
+  const cityRowsAll = grouped.get(city.slug) || [];
+  const finalRows = cityRowsAll.slice(-75);
+  if (finalRows.length !== 75) underfilledCities.push(`${city.slug}:${finalRows.length}`);
+  rows.push(...finalRows);
+}
+
 if (!rows.length) throw new Error("Nije pronađeno nijedno verificirano gradsko pitanje.");
 
 for (let offset = 0; offset < rows.length; offset += 500) {
-  const chunk = rows.slice(offset, offset + 500);
+  const chunk = rows.slice(offset, offset + 500).map(({ city_slug, ...row }) => row);
   const { error } = await supabase.from("city_questions").upsert(chunk, { onConflict: "city_id,question" });
   if (error) throw error;
   console.log(`Uvezeno ${Math.min(offset + chunk.length, rows.length)} / ${rows.length} pitanja`);
@@ -117,6 +133,7 @@ for (let offset = 0; offset < rows.length; offset += 500) {
 
 console.log(`Gradova u registru: ${cityRows.length}`);
 console.log(`Gradova u Supabaseu: ${dbCities.length}`);
-console.log(`Pitanja: ${rows.length}`);
+console.log(`Pitanja nakon odabira zadnjih 75 po gradu: ${rows.length}`);
 console.log(`Duplikata preskočeno: ${duplicateQuestionRows}`);
 console.log(`Neuspjelih izvora: ${sourceFailures}`);
+console.log(`Gradovi ispod 75: ${underfilledCities.length ? underfilledCities.join(", ") : "nijedan"}`);
