@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-export async function saveQuizResult({ quizType, cityId = null, score, total, timeSeconds = null }) {
+export async function saveQuizResult({ quizType, cityId = null, citySlug = null, category = null, score, total, timeSeconds = null }) {
   if (!supabase) return { saved: false, reason: "Supabase nije konfiguriran." };
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -9,7 +9,8 @@ export async function saveQuizResult({ quizType, cityId = null, score, total, ti
   const { error } = await supabase.from("quiz_results").insert({
     user_id: user.id,
     quiz_type: quizType,
-    city_id: cityId,
+    category,
+    city_slug: citySlug ?? cityId,
     score,
     total,
     time_seconds: timeSeconds,
@@ -23,9 +24,19 @@ export async function getMyResults(limit = 20) {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("quiz_results")
-    .select("id,quiz_type,city_id,score,total,time_seconds,created_at")
+    .select("id,quiz_type,category,city_slug,score,total,percentage,time_seconds,created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getLeaderboard(quizType = null, limit = 50) {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc("get_leaderboard", {
+    p_quiz_type: quizType,
+    p_limit: limit,
+  });
   if (error) throw error;
   return data ?? [];
 }
