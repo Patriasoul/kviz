@@ -34,7 +34,7 @@ async function loadSource(url) {
 }
 
 function prepareSource(source) {
-  let prepared = source.replace(/([,{]\s*)([A-Za-z_$][\w$-]*-[\w$-]+)\s*:/g, "$1'$2':");
+  let prepared = source.replace(/([,{]\s*)([A-Za-z_$][\w$-]+)\s*:/g, "$1'$2':");
   prepared = prepared.replace(/\[f\[1\]\[0\],\.\.\.f\[1\]\[2\]\]/g, "Array.isArray(f[1][2]) ? [f[1][0], ...f[1][2]] : (Array.isArray(f[1][1]) ? f[1][1] : [])");
   return prepared;
 }
@@ -130,11 +130,25 @@ function questionTextSignature(row) {
   return normalizeText(row.question);
 }
 
+// Online questions are locally researched supplements. To avoid a visible
+// answer-position pattern (especially batches written with the correct answer
+// first), deterministically redistribute the four answers across A/B/C/D.
+// The correct answer moves with its text, so correctness is preserved.
+function mixOnlineAnswers(row) {
+  const answers = row.answers.map(String);
+  const correct = Number(row.correctIndex);
+  const seed = [...String(row.id || row.question || "")].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const targetIndex = seed % 4;
+  if (correct === targetIndex) return { ...row, answers, correctIndex: correct };
+  const mixed = answers.slice();
+  [mixed[correct], mixed[targetIndex]] = [mixed[targetIndex], mixed[correct]];
+  return { ...row, answers: mixed, correctIndex: targetIndex };
+}
+
 function assembleCity(city, candidates, onlinePool) {
   const byId = new Map();
   const byText = new Map();
   const provenance = new Map();
-  const sourceRows = [];
 
   // First pass: retain every existing verified question exactly as supplied.
   for (const candidate of candidates) {
@@ -162,11 +176,12 @@ function assembleCity(city, candidates, onlinePool) {
   // Second pass: only fill a deficit, using locally researched questions from
   // src/data/cityQuestions.online.js. Never replace or rewrite verified rows.
   const onlineAdded = [];
-  for (const row of onlinePool) {
+  for (const sourceRow of onlinePool) {
     if (byId.size >= TARGET_PER_CITY) break;
+    if (!sourceRow || sourceRow.cityId !== city.slug || sourceRow.citySource !== "online") continue;
+    const row = mixOnlineAnswers(sourceRow);
     const id = String(row.id || "");
-    if (!id || row.cityId !== city.slug || row.citySource !== "online") continue;
-    if (!row.sourceUrl || !row.question || !Array.isArray(row.answers) || row.answers.length !== 4) continue;
+    if (!id || !row.sourceUrl || !row.question || !Array.isArray(row.answers) || row.answers.length !== 4) continue;
     if (!Number.isInteger(Number(row.correctIndex)) || Number(row.correctIndex) < 0 || Number(row.correctIndex) > 3) continue;
     const signature = questionSignature(row);
     const textSignature = questionTextSignature(row);
