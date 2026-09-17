@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Generate data and build
+    name: Build PatriaSoul Quiz
     runs-on: ubuntu-latest
 
     steps:
@@ -27,25 +27,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Generate canonical question data
-        id: generate
+      - name: Generate general question data
         run: npm run questions
 
-      - name: Upload city audit
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: patriasoul-city-question-audit
-          path: src/data/cityQuestions.audit.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-      - name: Commit generated question data
+      - name: Commit generated general question data
         if: success() && github.event_name == 'push'
         run: |
           git config user.name "patriasoul-kviz-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/data/questions.generated.js src/data/cityQuestions.generated.js src/data/cityQuestions.audit.json
+          git add src/data/questions.generated.js
           if git diff --cached --quiet; then
             echo "No generated changes."
             exit 0
@@ -53,12 +43,10 @@ jobs:
           git commit -m "data: import canonical PatriaSoul quiz questions"
           git push
 
-      - name: Validate generated question files
+      - name: Validate generated question file
         run: |
           test -s src/data/questions.generated.js
-          test -s src/data/cityQuestions.generated.js
           grep -q "export const QUESTIONS" src/data/questions.generated.js
-          grep -q "export const CITY_QUESTIONS" src/data/cityQuestions.generated.js
 
       - name: Production build
         run: npm run build
