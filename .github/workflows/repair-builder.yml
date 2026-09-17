@@ -1,0 +1,41 @@
+name: Repair city question builder
+
+on:
+  workflow_run:
+    workflows: ["PatriaSoul Quiz CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_branch == 'quiz-engine' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout quiz-engine
+        uses: actions/checkout@v4
+        with:
+          ref: quiz-engine
+
+      - name: Repair undefined online rows
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/build-questions.mjs')
+          s = p.read_text(encoding='utf-8')
+          old = '    const id = String(row.id || "");'
+          new = '    if (!row) continue;\n    const id = String(row.id || "");'
+          if old not in s:
+              raise SystemExit('Builder repair target not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Commit repair
+        run: |
+          git config user.name "PatriaSoul"
+          git config user.email "patriasoul@protonmail.com"
+          git add scripts/build-questions.mjs
+          git diff --cached --quiet && exit 0
+          git commit -m "fix: skip empty online city question rows"
+          git push origin HEAD:quiz-engine
