@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Flag, Search, Shield, Loader2 } from "lucide-react";
 import { cityFlagCandidates } from "../data/cityFlags";
-import { fetchCityList } from "../lib/cityQuestions";
-
-const MIN_QUESTIONS_TO_PLAY = 1;
+import { fetchCityList, fetchCityQuestions } from "../lib/cityQuestions";
 
 function CityFlag({ cityName }) {
   const candidates = cityFlagCandidates(cityName);
@@ -36,6 +34,7 @@ export default function BraniSvojGrad({ onBack, onStart }) {
   const [search, setSearch] = useState("");
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [startingSlug, setStartingSlug] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -60,6 +59,20 @@ export default function BraniSvojGrad({ onBack, onStart }) {
     );
   }, [cities, search]);
 
+  const startCity = async (city) => {
+    setStartingSlug(city.slug);
+    setError("");
+    const result = await fetchCityQuestions(city.slug);
+    if (result.error) {
+      setError(`Pitanja za ${city.name} nisu dostupna: ${result.error.message}`);
+      setStartingSlug("");
+      return;
+    }
+    globalThis.__PATRIA_CITY_QUESTIONS__ = result.data ?? [];
+    setStartingSlug("");
+    onStart(city.slug, city.name);
+  };
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-16">
       <section className="patria-card overflow-hidden">
@@ -70,7 +83,7 @@ export default function BraniSvojGrad({ onBack, onStart }) {
           </div>
           <h1 className="mt-3 font-display text-4xl font-bold sm:text-5xl">Odaberi svoj grad</h1>
           <p className="mt-4 max-w-2xl text-primary-foreground/75">
-            Pitanja se sada učitavaju iz Supabase baze. Grad ne mora čekati da bude kompletiran s 75 pitanja — broj pitanja raste kako gradsku bazu nadopunjujemo.
+            Pitanja se učitavaju iz Supabase baze. Grad ne mora čekati da bude kompletiran s 75 pitanja — broj pitanja raste kako gradsku bazu nadopunjujemo.
           </p>
         </div>
 
@@ -94,7 +107,7 @@ export default function BraniSvojGrad({ onBack, onStart }) {
 
         {!loading && error && (
           <div className="m-5 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">
-            Baza gradova trenutno nije dostupna: {error}
+            {error}
           </div>
         )}
 
@@ -103,15 +116,16 @@ export default function BraniSvojGrad({ onBack, onStart }) {
             {filteredCities.map((city) => (
               <button
                 key={city.slug}
-                onClick={() => onStart(city.slug, city.name)}
-                className="patria-card group overflow-hidden text-left transition hover:-translate-y-0.5"
+                onClick={() => startCity(city)}
+                disabled={Boolean(startingSlug)}
+                className="patria-card group overflow-hidden text-left transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"
               >
                 <div className="relative h-32 overflow-hidden bg-white">
                   <CityFlag cityName={city.name} />
                   <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-3 left-4 flex items-center gap-2 text-white pointer-events-none">
                     <span className="flex h-9 w-9 items-center justify-center rounded-md bg-black/50 backdrop-blur-sm">
-                      <Flag className="h-5 w-5" />
+                      {startingSlug === city.slug ? <Loader2 className="h-5 w-5 animate-spin" /> : <Flag className="h-5 w-5" />}
                     </span>
                     <span className="font-bold drop-shadow">{city.name}</span>
                   </div>
@@ -119,7 +133,7 @@ export default function BraniSvojGrad({ onBack, onStart }) {
                 <div className="flex items-center justify-between gap-3 p-5">
                   <div>
                     <p className="text-sm font-semibold">Baza pitanja</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Pitanja se učitavaju iz baze</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Učitavanje pitanja pri odabiru</p>
                   </div>
                   <ArrowRight className="h-5 w-5 text-muted-foreground transition group-hover:translate-x-1" />
                 </div>
