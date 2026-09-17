@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal } from "lucide-react";
+import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
 import { fetchCities, fetchCityQuestions, shuffle } from "./lib/cityQuiz";
+import { fetchMainQuizQuestions, getMainQuizCount } from "./lib/mainQuiz";
 import { getLeaderboard, saveQuizResult } from "./lib/results";
 import { supabase } from "./lib/supabase";
 
@@ -25,8 +26,12 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [cities, setCities] = useState([]);
   const [city, setCity] = useState(null);
+  const [activeQuizType, setActiveQuizType] = useState(null);
+  const [activeCategory, setActiveCategory] = useState(null);
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [loadingMainCount, setLoadingMainCount] = useState(true);
+  const [mainCount, setMainCount] = useState(0);
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -41,6 +46,18 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    getMainQuizCount().then((count) => {
+      if (!cancelled) setMainCount(count);
+    }).catch(() => {
+      if (!cancelled) setMainCount(0);
+    }).finally(() => {
+      if (!cancelled) setLoadingMainCount(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const acceptRules = () => {
     localStorage.setItem("patriasoul_rules_accepted", "1");
     setRulesAccepted(true);
@@ -49,60 +66,165 @@ export default function App() {
 
   const signIn = async () => {
     setError("");
-    if (!supabase) { setError("Supabase nije konfiguriran. Dodaj VITE_SUPABASE_URL i VITE_SUPABASE_ANON_KEY."); return; }
+    if (!supabase) {
+      setError("Supabase nije konfiguriran. Dodaj VITE_SUPABASE_URL i VITE_SUPABASE_ANON_KEY.");
+      return;
+    }
     const email = window.prompt("Upiši svoju e-mail adresu:");
     if (!email) return;
-    const { error: authError } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin } });
-    if (authError) setError(authError.message); else setError("Provjeri e-mail i otvori poveznicu za prijavu.");
+    const { error: authError } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (authError) setError(authError.message);
+    else setError("Provjeri e-mail i otvori poveznicu za prijavu.");
   };
 
-  const signOut = async () => { await supabase?.auth.signOut(); setUser(null); };
+  const signOut = async () => {
+    await supabase?.auth.signOut();
+    setUser(null);
+  };
 
   const openCities = async () => {
-    if (!rulesAccepted) { setScreen("rules"); return; }
-    setError(""); setScreen("cities");
+    if (!rulesAccepted) {
+      setScreen("rules");
+      return;
+    }
+    setError("");
+    setScreen("cities");
     if (cities.length) return;
     setLoadingCities(true);
-    try { setCities(await fetchCities()); } catch (e) { setError(e.message || "Gradovi se trenutno ne mogu učitati."); } finally { setLoadingCities(false); }
+    try {
+      setCities(await fetchCities());
+    } catch (e) {
+      setError(e.message || "Gradovi se trenutno ne mogu učitati.");
+    } finally {
+      setLoadingCities(false);
+    }
   };
 
   const openLeaderboard = async (type = null) => {
-    setError(""); setScreen("leaderboard"); setLeaderboardType(type); setLoadingLeaderboard(true);
-    try { setLeaderboard(await getLeaderboard(type, 50)); } catch (e) { setError(e.message || "Rang-lista se trenutno ne može učitati."); setLeaderboard([]); } finally { setLoadingLeaderboard(false); }
+    setError("");
+    setScreen("leaderboard");
+    setLeaderboardType(type);
+    setLoadingLeaderboard(true);
+    try {
+      setLeaderboard(await getLeaderboard(type, 50));
+    } catch (e) {
+      setError(e.message || "Rang-lista se trenutno ne može učitati.");
+      setLeaderboard([]);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
   };
 
   const startCity = async (selectedCity) => {
-    setError(""); setLoadingQuiz(true);
+    if (!rulesAccepted) {
+      setScreen("rules");
+      return;
+    }
+    setError("");
+    setLoadingQuiz(true);
     try {
       const questions = await fetchCityQuestions(selectedCity.id);
-      if (questions.length < 10) throw new Error(`Za ${selectedCity.name} trenutno nije dostupno dovoljno aktivnih pitanja.`);
-      setCity(selectedCity); setRound(shuffle(questions).slice(0, 10)); setResult(null); setScreen("quiz");
-    } catch (e) { setError(e.message || "Pitanja se trenutno ne mogu učitati."); } finally { setLoadingQuiz(false); }
+      if (questions.length < 10) {
+        throw new Error(`Za ${selectedCity.name} trenutno nije dostupno dovoljno aktivnih pitanja.`);
+      }
+      setCity(selectedCity);
+      setActiveQuizType("city");
+      setActiveCategory(null);
+      setRound(shuffle(questions).slice(0, 10));
+      setResult(null);
+      setScreen("quiz");
+    } catch (e) {
+      setError(e.message || "Pitanja se trenutno ne mogu učitati.");
+    } finally {
+      setLoadingQuiz(false);
+    }
   };
 
-  const home = () => { setScreen("home"); setRound([]); setResult(null); setError(""); };
+  const startMainCategory = async (category) => {
+    if (!rulesAccepted) {
+      setScreen("rules");
+      return;
+    }
+    setError("");
+    setLoadingQuiz(true);
+    try {
+      const questions = await fetchMainQuizQuestions(category[0]);
+      if (questions.length < 10) {
+        throw new Error(`Kategorija „${category[1]}” trenutno ima samo ${questions.length} aktivnih pitanja. Potrebno je najmanje 10.`);
+      }
+      setCity(null);
+      setActiveQuizType("croatian");
+      setActiveCategory(category[0]);
+      setRound(shuffle(questions).slice(0, 10));
+      setResult(null);
+      setScreen("quiz");
+    } catch (e) {
+      setError(e.message || "Pitanja se trenutno ne mogu učitati.");
+    } finally {
+      setLoadingQuiz(false);
+    }
+  };
+
+  const home = () => {
+    setScreen("home");
+    setRound([]);
+    setResult(null);
+    setError("");
+    setActiveQuizType(null);
+    setActiveCategory(null);
+    setCity(null);
+  };
 
   const completeQuiz = async (quizResult) => {
     setResult({ ...quizResult, saving: Boolean(user) });
     setScreen("result");
-    if (user && city) {
-      try {
-        const saved = await saveQuizResult({ quizType: "city", citySlug: city.slug, ...quizResult });
-        setResult((current) => ({ ...current, saved: saved.saved, saving: false }));
-      } catch (e) {
-        setResult((current) => ({ ...current, saving: false, saveError: e.message }));
-      }
+
+    if (!user) return;
+
+    try {
+      const saved = await saveQuizResult({
+        quizType: activeQuizType,
+        category: activeQuizType === "croatian" ? activeCategory : null,
+        citySlug: activeQuizType === "city" ? city?.slug : null,
+        ...quizResult,
+      });
+      setResult((current) => ({ ...current, saved: saved.saved, saving: false }));
+    } catch (e) {
+      setResult((current) => ({ ...current, saving: false, saveError: e.message }));
     }
   };
 
-  useEffect(() => { if (screen === "quiz") window.scrollTo({ top: 0, behavior: "smooth" }); }, [screen]);
+  const restartQuiz = () => {
+    if (activeQuizType === "city" && city) {
+      startCity(city);
+      return;
+    }
+    const selected = categories.find(([id]) => id === activeCategory);
+    if (selected) startMainCategory(selected);
+  };
+
+  useEffect(() => {
+    if (screen === "quiz") window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [screen]);
+
+  const activeCategoryTitle = categories.find(([id]) => id === activeCategory)?.[1] ?? "Hrvatski kviz";
+  const quizTitle = activeQuizType === "city" ? `Brani svoj grad: ${city?.name ?? ""}` : activeCategoryTitle;
+  const quizSubtitle = activeQuizType === "city" ? "75 pitanja u bazi · 10 pitanja po rundi" : `${mainCount.toLocaleString("hr-HR")} pitanja u glavnoj bazi · 10 pitanja po rundi`;
 
   return <div className="min-h-screen bg-background text-foreground">
     <div className="patria-stripe" />
     <header className="border-b border-border bg-primary text-primary-foreground">
       <div className="patria-checker"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
         <button onClick={home} className="font-display text-2xl font-bold">PATRIA<span className="text-red-300">SOUL</span></button>
-        <nav className="flex items-center gap-4 text-sm"><button onClick={home}>Početna</button><button onClick={() => openLeaderboard()} className="hidden items-center gap-1 sm:flex"><Medal className="h-4 w-4" /> Rang-lista</button><button onClick={() => setScreen("rules")} className="hidden items-center gap-1 sm:flex"><FileText className="h-4 w-4" /> Pravilnik</button>{user ? <button onClick={signOut} className="flex items-center gap-1"><LogOut className="h-4 w-4" /> Odjava</button> : <button onClick={signIn} className="flex items-center gap-1"><LogIn className="h-4 w-4" /> Prijava</button>}</nav>
+        <nav className="flex items-center gap-4 text-sm">
+          <button onClick={home}>Početna</button>
+          <button onClick={() => openLeaderboard()} className="hidden items-center gap-1 sm:flex"><Medal className="h-4 w-4" /> Rang-lista</button>
+          <button onClick={() => setScreen("rules")} className="hidden items-center gap-1 sm:flex"><FileText className="h-4 w-4" /> Pravilnik</button>
+          {user ? <button onClick={signOut} className="flex items-center gap-1"><LogOut className="h-4 w-4" /> Odjava</button> : <button onClick={signIn} className="flex items-center gap-1"><LogIn className="h-4 w-4" /> Prijava</button>}
+        </nav>
       </div></div>
     </header>
 
@@ -113,13 +235,23 @@ export default function App() {
         <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[.16em] text-accent"><Flag className="h-4 w-4" /> Znanje · ponos · nasljeđe</div>
         <h1 className="font-display text-5xl font-bold leading-tight sm:text-6xl">Hrvatski kviz</h1>
         <p className="mt-5 max-w-2xl text-lg text-muted-foreground">Provjeri svoje znanje o Hrvatskoj — od povijesti i Domovinskog rata do geografije, prirode, baštine, glagoljice, vjere, sporta i znanosti.</p>
-        <div className="mt-8 flex flex-wrap gap-3"><button onClick={openCities} className="patria-button-accent"><MapPin className="mr-2 h-4 w-4" /> Brani svoj grad</button><button onClick={() => openLeaderboard()} className="patria-button"><Medal className="mr-2 h-4 w-4" /> Rang-lista</button><a href="#kategorije" className="patria-button">Odaberi kategoriju</a></div>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <a href="#kategorije" className="patria-button-accent"><BookOpen className="mr-2 h-4 w-4" /> Igraj Hrvatski kviz</a>
+          <button onClick={openCities} className="patria-button"><MapPin className="mr-2 h-4 w-4" /> Brani svoj grad</button>
+          <button onClick={() => openLeaderboard()} className="patria-button"><Medal className="mr-2 h-4 w-4" /> Rang-lista</button>
+        </div>
+        <div className="mt-6 flex flex-wrap gap-2 text-sm text-muted-foreground">
+          <span className="rounded-full border border-border bg-card px-3 py-1.5">{loadingMainCount ? "Učitavam bazu…" : `${mainCount.toLocaleString("hr-HR")} pitanja`}</span>
+          <span className="rounded-full border border-border bg-card px-3 py-1.5">10 kategorija</span>
+          <span className="rounded-full border border-border bg-card px-3 py-1.5">10 pitanja po rundi</span>
+        </div>
         {user && <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm"><UserRound className="h-4 w-4 text-accent" /> Prijavljen korisnik</div>}
       </div></div></section>
 
-      <section id="kategorije" className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20"><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">10 područja</p><h2 className="patria-accent-line mt-2 text-3xl">Hrvatski kviz</h2>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{categories.map(([id, title, desc], i) => <button key={id} onClick={() => setError(`Kategorija „${title}” još čeka povezivanje s glavnom bazom pitanja.`)} className="patria-card p-5 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-sm font-bold text-primary">{String(i + 1).padStart(2, "0")}</span><h3 className="mt-5 text-xl">{title}</h3><p className="mt-2 text-sm text-muted-foreground">{desc}</p><p className="mt-4 text-xs font-semibold text-muted-foreground">Glavna baza pitanja je sljedeći blok povezivanja.</p></button>)}</div>
+      <section id="kategorije" className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20"><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">10 područja</p><h2 className="patria-accent-line mt-2 text-3xl">Odaberi kategoriju</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{categories.map(([id, title, desc], i) => <button key={id} disabled={loadingQuiz} onClick={() => startMainCategory([id, title, desc])} className="patria-card group p-5 text-left disabled:opacity-60"><div className="flex items-start justify-between gap-4"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-sm font-bold text-primary">{String(i + 1).padStart(2, "0")}</span><ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" /></div><h3 className="mt-5 text-xl">{title}</h3><p className="mt-2 text-sm text-muted-foreground">{desc}</p><p className="mt-4 text-xs font-semibold text-accent">Pokreni 10 pitanja →</p></button>)}</div>
         {error && <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+        {loadingQuiz && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"><div className="rounded-xl bg-card px-6 py-5 shadow-xl"><div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam pitanja...</div></div></div>}
       </section>
 
       <section className="border-y border-border bg-secondary/40"><div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h2 className="mt-2 text-3xl">Tri načina igranja.</h2><p className="mt-3 max-w-2xl text-muted-foreground">Hrvatski kviz, Brani svoj grad i Dnevni kviz odvojeni su sustavi s vlastitim pravilima i rezultatima.</p></div><ShieldCheck className="h-12 w-12 shrink-0 text-accent" /></div></section>
@@ -132,9 +264,9 @@ export default function App() {
       {loadingQuiz && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"><div className="rounded-xl bg-card px-6 py-5 shadow-xl"><div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam pitanja...</div></div></div>}
     </main>}
 
-    {screen === "quiz" && <QuizPlayer questions={round} title={`Brani svoj grad: ${city?.name ?? ""}`} subtitle="75 pitanja u bazi · 10 pitanja po rundi" timeLimit={20} onComplete={completeQuiz} onQuit={() => setScreen("cities")} />}
+    {screen === "quiz" && <QuizPlayer questions={round} title={quizTitle} subtitle={quizSubtitle} timeLimit={20} onComplete={completeQuiz} onQuit={() => activeQuizType === "city" ? setScreen("cities") : setScreen("home")} />}
 
-    {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">{result.saved ? "Rezultat je spremljen." : user ? "Rezultat se obrađuje." : "Rezultat je prikazan."}</p><p className="mt-2 text-muted-foreground">{result.saveError || (user ? "Tvoj rezultat je povezan s tvojim profilom." : "Prijavi se kako bi se rezultat mogao spremiti u tvoj račun.")}</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button onClick={() => startCity(city)} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Igraj ponovno</button><button onClick={() => setScreen("cities")} className="patria-button">Odaberi drugi grad</button><button onClick={() => openLeaderboard("city")} className="patria-button">Rang-lista</button></div></div></div></main>}
+    {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">{result.saved ? "Rezultat je spremljen." : user ? "Rezultat se obrađuje." : "Rezultat je prikazan."}</p><p className="mt-2 text-muted-foreground">{result.saveError || (user ? "Tvoj rezultat je povezan s tvojim profilom." : "Prijavi se kako bi se rezultat mogao spremiti u tvoj račun.")}</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button onClick={restartQuiz} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Igraj ponovno</button><button onClick={activeQuizType === "city" ? () => setScreen("cities") : home} className="patria-button">{activeQuizType === "city" ? "Odaberi drugi grad" : "Odaberi kategoriju"}</button><button onClick={() => openLeaderboard(activeQuizType)} className="patria-button">Rang-lista</button></div></div></div></main>}
 
     {screen === "leaderboard" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h1 className="mt-2 font-display text-4xl font-bold">Rang-lista</h1><p className="mt-2 text-muted-foreground">Rezultati igrača koji su svoje rezultate spremili u PatriaSoul.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
       <div className="mb-6 flex flex-wrap gap-2"><button onClick={() => openLeaderboard(null)} className={leaderboardType === null ? "patria-button-accent" : "patria-button"}>Sve</button><button onClick={() => openLeaderboard("city")} className={leaderboardType === "city" ? "patria-button-accent" : "patria-button"}>Brani svoj grad</button><button onClick={() => openLeaderboard("croatian")} className={leaderboardType === "croatian" ? "patria-button-accent" : "patria-button"}>Hrvatski kviz</button><button onClick={() => openLeaderboard("daily")} className={leaderboardType === "daily" ? "patria-button-accent" : "patria-button"}>Dnevni kviz</button></div>
