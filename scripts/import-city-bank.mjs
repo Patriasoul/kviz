@@ -49,6 +49,7 @@ if (!cities.length) throw new Error("gradovi.js nije dao PATRIA_CITY_DATA.");
 const cityRows = cities.map((city) => ({
   slug: String(city.slug),
   name: String(city.name),
+  county: String(city.county || ""),
   active: true,
 }));
 
@@ -58,6 +59,13 @@ const { error: cityError } = await supabase
 
 if (cityError) throw cityError;
 
+const { data: dbCities, error: dbCityError } = await supabase
+  .from("cities")
+  .select("id,slug");
+
+if (dbCityError) throw dbCityError;
+
+const cityIdBySlug = new Map((dbCities || []).map((city) => [city.slug, city.id]));
 const questionMap = new Map();
 let sourceFailures = 0;
 
@@ -70,6 +78,7 @@ for (const url of citySources) {
     for (const [, layer] of layers) {
       if (!layer || typeof layer.forCity !== "function") continue;
       for (const city of cities) {
+        if (!cityIdBySlug.has(city.slug)) continue;
         for (const lookup of [city.slug, city.name]) {
           let rows = [];
           try { rows = layer.forCity(lookup); } catch { rows = []; }
@@ -78,16 +87,21 @@ for (const url of citySources) {
           for (const row of rows) {
             if (!row || row.cityId !== city.slug || row.citySource !== "verified" || row.id == null) continue;
             if (!Array.isArray(row.answers) || row.answers.length !== 4) continue;
-            const sourceKey = String(row.id);
-            questionMap.set(`${city.slug}:${sourceKey}`, {
-              city_slug: city.slug,
-              source_key: sourceKey,
-              question: String(row.question || ""),
-              answers: row.answers.map(String),
-              correct_index: Number(row.correctIndex),
+            const correctIndex = Number(row.correctIndex);
+            if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) continue;
+            const question = String(row.question || "").trim();
+            if (!question) continue;
+
+            questionMap.set(`${city.slug}:${row.id}`, {
+              city_id: cityIdBySlug.get(city.slug),
+              question,
+              answer_a: String(row.answers[0]),
+              answer_b: String(row.answers[1]),
+              answer_c: String(row.answers[2]),
+              answer_d: String(row.answers[3]),
+              correct_index: correctIndex,
               category: row.category || "gradovi",
               source_url: row.sourceUrl || null,
-              source_type: "verified",
               active: true,
             });
           }
@@ -100,18 +114,13 @@ for (const url of citySources) {
   }
 }
 
-const rows = [...questionMap.values()].filter((row) =>
-  row.question &&
-  Number.isInteger(row.correct_index) &&
-  row.correct_index >= 0 &&
-  row.correct_index <= 3,
-);
+const rows = [...questionMap.values()];
 
 for (let offset = 0; offset < rows.length; offset += 500) {
   const chunk = rows.slice(offset, offset + 500);
   const { error } = await supabase
     .from("city_questions")
-    .upsert(chunk, { onConflict: "city_slug,source_key" });
+    .upsert(chunk, { onConflict: "city_id,question" });
   if (error) throw error;
   console.log(`Uvezeno ${Math.min(offset + chunk.length, rows.length)} / ${rows.length} pitanja`);
 }
