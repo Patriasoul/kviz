@@ -1,5 +1,13 @@
 import { supabase } from "./supabase";
 
+const CATEGORY_ALIASES = {
+  "domovinski-rat": "domovinski_rat",
+};
+
+function resolveCategory(category) {
+  return CATEGORY_ALIASES[category] ?? category;
+}
+
 export async function fetchMainQuizQuestions(category = null) {
   if (!supabase) throw new Error("Supabase nije konfiguriran.");
 
@@ -8,7 +16,7 @@ export async function fetchMainQuizQuestions(category = null) {
     .select("id,category,question,answer_a,answer_b,answer_c,answer_d,correct_index,source_url")
     .eq("active", true);
 
-  if (category) query = query.eq("category", category);
+  if (category) query = query.eq("category", resolveCategory(category));
 
   const { data, error } = await query.order("created_at");
   if (error) throw error;
@@ -25,8 +33,14 @@ export async function fetchMainQuizQuestions(category = null) {
 
 export async function getMainQuizCount(category = null) {
   if (!supabase) return 0;
-  let query = supabase.from("quiz_questions").select("id", { count: "exact", head: true }).eq("active", true);
-  if (category) query = query.eq("category", category);
+
+  let query = supabase
+    .from("quiz_questions")
+    .select("id", { count: "exact", head: true })
+    .eq("active", true);
+
+  if (category) query = query.eq("category", resolveCategory(category));
+
   const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
