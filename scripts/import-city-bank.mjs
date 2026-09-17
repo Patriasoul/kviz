@@ -13,13 +13,9 @@ const citySources = [
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !serviceKey) {
-  throw new Error("Postavi VITE_SUPABASE_URL (ili SUPABASE_URL) i SUPABASE_SERVICE_ROLE_KEY prije importa.");
-}
+if (!supabaseUrl || !serviceKey) throw new Error("Postavi VITE_SUPABASE_URL (ili SUPABASE_URL) i SUPABASE_SERVICE_ROLE_KEY prije importa.");
 
-const supabase = createClient(supabaseUrl, serviceKey, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+const supabase = createClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
 async function load(url) {
   const response = await fetch(url);
@@ -40,33 +36,22 @@ function context() {
 
 const registryContext = context();
 vm.runInContext(prepare(await load(registryUrl)), registryContext.context, { filename: registryUrl });
-const cities = Array.isArray(registryContext.window.PATRIA_CITY_DATA)
-  ? registryContext.window.PATRIA_CITY_DATA
-  : [];
-
+const cities = Array.isArray(registryContext.window.PATRIA_CITY_DATA) ? registryContext.window.PATRIA_CITY_DATA : [];
 if (!cities.length) throw new Error("gradovi.js nije dao PATRIA_CITY_DATA.");
 
-const cityRows = cities.map((city) => ({
-  slug: String(city.slug),
-  name: String(city.name),
-  county: String(city.county || ""),
-  active: true,
-}));
+const cityRows = cities.map((city) => ({ slug: String(city.slug), name: String(city.name), county: String(city.county || ""), active: true }));
 
-// public.cities is canonical and RLS-protected. Resolve existing IDs only.
-const { data: dbCities, error: dbCityError } = await supabase
-  .from("cities")
-  .select("id,slug,name");
-
+const { data: dbCities, error: dbCityError } = await supabase.from("cities").select("id,slug,name");
 if (dbCityError) throw dbCityError;
 
 const cityIdBySlug = new Map((dbCities || []).map((city) => [String(city.slug), city.id]));
 const missingCities = cityRows.filter((city) => !cityIdBySlug.has(city.slug));
-if (missingCities.length) {
-  throw new Error(`Nedostaju gradovi u public.cities: ${missingCities.map((city) => city.slug).join(", ")}`);
-}
+if (missingCities.length) throw new Error(`Nedostaju gradovi u public.cities: ${missingCities.map((city) => city.slug).join(", ")}`);
 
+// DB unique key is (city_id, question). Deduplicate before upsert so one batch
+// can never contain two rows targeting the same constrained value.
 const questionMap = new Map();
+let duplicateQuestionRows = 0;
 let sourceFailures = 0;
 
 for (const url of citySources) {
@@ -92,7 +77,13 @@ for (const url of citySources) {
             const question = String(row.question || "").trim();
             if (!question) continue;
 
-            questionMap.set(`${city.slug}:${row.id}`, {
+            const key = `${city.slug}:${question}`;
+            if (questionMap.has(key)) {
+              duplicateQuestionRows += 1;
+              continue;
+            }
+
+            questionMap.set(key, {
               city_id: cityIdBySlug.get(city.slug),
               question,
               answer_a: String(row.answers[0]),
@@ -115,14 +106,11 @@ for (const url of citySources) {
 }
 
 const rows = [...questionMap.values()];
-
 if (!rows.length) throw new Error("Nije pronađeno nijedno verificirano gradsko pitanje.");
 
 for (let offset = 0; offset < rows.length; offset += 500) {
   const chunk = rows.slice(offset, offset + 500);
-  const { error } = await supabase
-    .from("city_questions")
-    .upsert(chunk, { onConflict: "city_id,question" });
+  const { error } = await supabase.from("city_questions").upsert(chunk, { onConflict: "city_id,question" });
   if (error) throw error;
   console.log(`Uvezeno ${Math.min(offset + chunk.length, rows.length)} / ${rows.length} pitanja`);
 }
@@ -130,4 +118,5 @@ for (let offset = 0; offset < rows.length; offset += 500) {
 console.log(`Gradova u registru: ${cityRows.length}`);
 console.log(`Gradova u Supabaseu: ${dbCities.length}`);
 console.log(`Pitanja: ${rows.length}`);
+console.log(`Duplikata preskočeno: ${duplicateQuestionRows}`);
 console.log(`Neuspjelih izvora: ${sourceFailures}`);
