@@ -9,6 +9,9 @@ for (const batch of [
   { file: "cityQuestions.online.batch4.js", marker: "// BATCH4_MERGED", exportName: "CITY_ONLINE_QUESTIONS_BATCH_4" },
   { file: "cityQuestions.online.batch5.js", marker: "// BATCH5_MERGED", exportName: "CITY_ONLINE_QUESTIONS_BATCH_5" },
   { file: "cityQuestions.online.batch6.js", marker: "// BATCH6_MERGED", exportName: "CITY_ONLINE_QUESTIONS_BATCH_6" },
+  { file: "cityQuestions.online.batch7.js", marker: "// BATCH7_MERGED", exportName: "CITY_ONLINE_QUESTIONS_BATCH_7" },
+  { file: "cityQuestions.online.batch8.js", marker: "// BATCH8_MERGED", exportName: "CITY_ONLINE_QUESTIONS_BATCH_8" },
+  { file: "cityQuestions.online.batch9.js", marker: "// BATCH9_MERGED", exportName: "CITY_ONLINE_QUESTIONS_BATCH_9" },
 ]) {
   if (merged.includes(batch.marker)) continue;
   const source = await fs.readFile(path.join(dataDir, batch.file), "utf8");
