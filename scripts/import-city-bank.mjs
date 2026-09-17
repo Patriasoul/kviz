@@ -53,8 +53,7 @@ const cityRows = cities.map((city) => ({
   active: true,
 }));
 
-// Do not insert/update public.cities here. The table is already seeded with
-// the canonical 127 cities and is protected by RLS. We only resolve their IDs.
+// public.cities is canonical and RLS-protected. Resolve existing IDs only.
 const { data: dbCities, error: dbCityError } = await supabase
   .from("cities")
   .select("id,slug,name");
