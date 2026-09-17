@@ -53,19 +53,20 @@ const cityRows = cities.map((city) => ({
   active: true,
 }));
 
-const { error: cityError } = await supabase
-  .from("cities")
-  .upsert(cityRows, { onConflict: "slug" });
-
-if (cityError) throw cityError;
-
+// Do not insert/update public.cities here. The table is already seeded with
+// the canonical 127 cities and is protected by RLS. We only resolve their IDs.
 const { data: dbCities, error: dbCityError } = await supabase
   .from("cities")
-  .select("id,slug");
+  .select("id,slug,name");
 
 if (dbCityError) throw dbCityError;
 
-const cityIdBySlug = new Map((dbCities || []).map((city) => [city.slug, city.id]));
+const cityIdBySlug = new Map((dbCities || []).map((city) => [String(city.slug), city.id]));
+const missingCities = cityRows.filter((city) => !cityIdBySlug.has(city.slug));
+if (missingCities.length) {
+  throw new Error(`Nedostaju gradovi u public.cities: ${missingCities.map((city) => city.slug).join(", ")}`);
+}
+
 const questionMap = new Map();
 let sourceFailures = 0;
 
@@ -116,6 +117,8 @@ for (const url of citySources) {
 
 const rows = [...questionMap.values()];
 
+if (!rows.length) throw new Error("Nije pronađeno nijedno verificirano gradsko pitanje.");
+
 for (let offset = 0; offset < rows.length; offset += 500) {
   const chunk = rows.slice(offset, offset + 500);
   const { error } = await supabase
@@ -125,6 +128,7 @@ for (let offset = 0; offset < rows.length; offset += 500) {
   console.log(`Uvezeno ${Math.min(offset + chunk.length, rows.length)} / ${rows.length} pitanja`);
 }
 
-console.log(`Gradova: ${cityRows.length}`);
+console.log(`Gradova u registru: ${cityRows.length}`);
+console.log(`Gradova u Supabaseu: ${dbCities.length}`);
 console.log(`Pitanja: ${rows.length}`);
 console.log(`Neuspjelih izvora: ${sourceFailures}`);
