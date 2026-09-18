@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, Volume2, VolumeX } from "lucide-react";
+import { getSoundEnabled, setSoundEnabled, playStart, playSelect, playCorrect, playWrong, playTick, playFinish, playResult } from "../lib/soundEffects";
 
 const LETTERS = ["A", "B", "C", "D"];
 
@@ -9,10 +10,19 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
   const [selected, setSelected] = useState(null);
   const [answered, setAnswered] = useState(false);
   const [remaining, setRemaining] = useState(timeLimit);
+  const [soundEnabled, setSoundEnabledState] = useState(getSoundEnabled);
   const startRef = useRef(Date.now());
   const scoreRef = useRef(0);
   const q = questions[index];
   const progress = questions.length ? ((index + 1) / questions.length) * 100 : 0;
+
+  useEffect(() => {
+    if (questions.length) playStart();
+  }, [questions.length]);
+
+  useEffect(() => {
+    if (!answered && remaining > 0 && remaining <= 5) playTick();
+  }, [remaining, answered]);
 
   useEffect(() => {
     if (!questions.length || answered) return undefined;
@@ -34,7 +44,7 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
         setAnswered(false);
         setRemaining(timeLimit);
       } else {
-        onComplete?.({ score: scoreRef.current, total: questions.length, timeSeconds: Math.floor((Date.now() - startRef.current) / 1000) });
+        playFinish();\n        playResult();\n        onComplete?.({ score: scoreRef.current, total: questions.length, timeSeconds: Math.floor((Date.now() - startRef.current) / 1000) });
       }
     }, 1100);
     return () => clearTimeout(timer);
@@ -56,7 +66,7 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
       <div className="mx-auto max-w-2xl">
         <div className="mb-2 flex items-center justify-between">
           <div>{subtitle && <div className="text-xs uppercase tracking-[0.2em] text-amber-400/80">{subtitle}</div>}<h1 className="font-display text-2xl font-bold">{title}</h1></div>
-          <div className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-sm text-white/70"><Clock className="h-4 w-4" />00:{String(Math.max(0, remaining)).padStart(2, "0")}</div>
+          <div className="flex items-center gap-2"><button type="button" onClick={toggleSound} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-white/70 transition hover:bg-white/10 hover:text-white" aria-label={soundEnabled ? "Isključi zvuk" : "Uključi zvuk"} title={soundEnabled ? "Isključi zvuk" : "Uključi zvuk"}>{soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}</button><div className="flex items-center gap-1.5 rounded-full bg-white/5 px-3 py-1.5 text-sm text-white/70"><Clock className="h-4 w-4" />00:{String(Math.max(0, remaining)).padStart(2, "0")}</div></div>
         </div>
         <div className="mb-8 flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10"><motion.div className="h-full bg-gradient-to-r from-amber-400 to-red-600" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.4 }} /></div><div className="whitespace-nowrap text-sm font-medium text-white/70">{index + 1} / {questions.length}</div></div>
         <AnimatePresence mode="wait">
