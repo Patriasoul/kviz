@@ -38,7 +38,12 @@ export default function App() {
   const [leaderboardType, setLeaderboardType] = useState(null);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("login");
+  const [authName, setAuthName] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
   const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authPasswordConfirm, setAuthPasswordConfirm] = useState("");
   const [authRulesAccepted, setAuthRulesAccepted] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
 
@@ -66,8 +71,13 @@ export default function App() {
       action();
       return true;
     }
+    setAuthMode("login");
     setAuthRulesAccepted(false);
+    setAuthName("");
+    setAuthUsername("");
     setAuthEmail("");
+    setAuthPassword("");
+    setAuthPasswordConfirm("");
     setError("");
     setAuthOpen(true);
     return false;
@@ -87,7 +97,72 @@ export default function App() {
     return "https://patriasoul.github.io/kviz/";
   };
 
+  const validateAuth = () => {
+    if (!authRulesAccepted) {
+      setError("Za nastavak moraš prihvatiti Pravilnik o igranju kvizova.");
+      return false;
+    }
+    if (!supabase) {
+      setError("Supabase nije konfiguriran.");
+      return false;
+    }
+    if (!authEmail.trim()) {
+      setError("Upiši svoju e-mail adresu.");
+      return false;
+    }
+    if (authPassword.length < 6) {
+      setError("Lozinka mora imati najmanje 6 znakova.");
+      return false;
+    }
+    return true;
+  };
+
   const submitAuth = async () => {
+    setError("");
+    if (!validateAuth()) return;
+    if (authMode === "register") {
+      if (!authName.trim() || !authUsername.trim()) {
+        setError("Upiši ime i prezime te korisničko ime.");
+        return;
+      }
+      if (authPassword !== authPasswordConfirm) {
+        setError("Lozinke se ne podudaraju.");
+        return;
+      }
+    }
+
+    setAuthLoading(true);
+    const result = authMode === "register"
+      ? await supabase.auth.signUp({
+          email: authEmail.trim(),
+          password: authPassword,
+          options: {
+            emailRedirectTo: getAuthRedirectUrl(),
+            data: { full_name: authName.trim(), username: authUsername.trim() },
+          },
+        })
+      : await supabase.auth.signInWithPassword({
+          email: authEmail.trim(),
+          password: authPassword,
+        });
+    setAuthLoading(false);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    if (authMode === "register" && !result.data.session) {
+      setAuthOpen(false);
+      setError("Račun je napravljen. Provjeri e-mail i potvrdi adresu prije prve prijave.");
+      return;
+    }
+
+    setAuthOpen(false);
+    setError("");
+  };
+
+  const signInWithProvider = async (provider) => {
     setError("");
     if (!authRulesAccepted) {
       setError("Za nastavak moraš prihvatiti Pravilnik o igranju kvizova.");
@@ -97,22 +172,31 @@ export default function App() {
       setError("Supabase nije konfiguriran.");
       return;
     }
-    if (!authEmail.trim()) {
-      setError("Upiši svoju e-mail adresu.");
+    setAuthLoading(true);
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: getAuthRedirectUrl() },
+    });
+    setAuthLoading(false);
+    if (authError) setError(authError.message);
+  };
+
+  const resetPassword = async () => {
+    setError("");
+    if (!supabase || !authEmail.trim()) {
+      setError("Upiši e-mail adresu za obnovu lozinke.");
       return;
     }
     setAuthLoading(true);
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email: authEmail.trim(),
-      options: { emailRedirectTo: getAuthRedirectUrl() },
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(authEmail.trim(), {
+      redirectTo: getAuthRedirectUrl(),
     });
     setAuthLoading(false);
-    if (authError) {
-      setError(authError.message);
+    if (resetError) {
+      setError(resetError.message);
       return;
     }
-    setAuthOpen(false);
-    setError("Poslan je e-mail za prijavu/registraciju. Otvori poveznicu iz e-maila i zatim pokreni kviz.");
+    setError("Poslan je e-mail za obnovu lozinke.");
   };
 
   const signOut = async () => {
@@ -260,25 +344,77 @@ export default function App() {
 
     {authOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4" onClick={() => !authLoading && setAuthOpen(false)}>
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-6">
+        <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[.18em] text-accent">PatriaSoul račun</p>
-          <h2 className="mt-2 font-display text-3xl font-bold">Prijava ili registracija</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Za igranje kviza moraš imati račun i prihvatiti pravilnik.</p>
+          <h2 className="mt-2 font-display text-3xl font-bold">{authMode === "login" ? "Prijava" : "Registracija"}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {authMode === "login" ? "Prijavi se i nastavi igrati PatriaSoul." : "Izradi svoj PatriaSoul račun."}
+          </p>
         </div>
-        <label className="block text-sm font-semibold">
+
+        <div className="grid gap-2">
+          <button disabled={authLoading} onClick={() => signInWithProvider("google")} className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 font-semibold transition hover:bg-secondary disabled:opacity-60">
+            <span className="flex h-5 w-5 items-center justify-center" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="h-5 w-5"><path fill="#4285F4" d="M21.35 12.23c0-.79-.07-1.55-.22-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42Z"/><path fill="#34A853" d="M12 21.5c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.69-1.72-5.46-4.03H3.3v2.53A9.74 9.74 0 0 0 12 21.5Z"/><path fill="#FBBC05" d="M6.54 13.59A5.85 5.85 0 0 1 6.24 12c0-.55.1-1.09.3-1.59V7.88H3.3A9.74 9.74 0 0 0 2.25 12c0 1.57.38 3.06 1.05 4.12l3.24-2.53Z"/><path fill="#EA4335" d="M12 6.38c1.43 0 2.72.49 3.73 1.45l2.8-2.8C16.84 3.35 14.63 2.5 12 2.5a9.74 9.74 0 0 0-8.7 5.38l3.24 2.53C7.31 8.1 9.46 6.38 12 6.38Z"/></svg>
+            </span>
+            Nastavi s Googleom
+          </button>
+
+          <button disabled={authLoading} onClick={() => signInWithProvider("custom:tiktok")} className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 font-semibold transition hover:bg-secondary disabled:opacity-60">
+            <span className="flex h-5 w-5 items-center justify-center text-foreground" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="h-5 w-5"><path fill="currentColor" d="M15.6 3c.23 1.86 1.27 3.36 3.2 4.1v2.72a8.24 8.24 0 0 1-3.18-1.04v6.28c0 4.01-2.74 6.2-6.02 6.2-3.02 0-5.35-2.08-5.35-5.12 0-3.26 2.63-5.45 6.01-5.45.28 0 .56.02.83.06v2.82a4.08 4.08 0 0 0-.83-.08c-1.56 0-3.04.93-3.04 2.62 0 1.48 1.08 2.43 2.47 2.43 1.58 0 2.9-.93 2.9-3.27V3h3.01Z"/></svg>
+            </span>
+            Nastavi s TikTokom
+          </button>
+        </div>
+
+        <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" /> ili <span className="h-px flex-1 bg-border" /></div>
+
+        {authMode === "register" && <>
+          <label className="block text-sm font-semibold">
+            Ime i prezime
+            <input value={authName} onChange={(e) => setAuthName(e.target.value)} type="text" autoComplete="name" placeholder="Ime i prezime" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
+          </label>
+          <label className="mt-4 block text-sm font-semibold">
+            Korisničko ime
+            <input value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} type="text" autoComplete="username" placeholder="npr. patriasoul123" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
+          </label>
+        </>}
+
+        <label className="mt-4 block text-sm font-semibold">
           E-mail adresa
           <input value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} type="email" autoComplete="email" placeholder="tvoj@email.com" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
         </label>
+
+        <label className="mt-4 block text-sm font-semibold">
+          Lozinka
+          <input value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} placeholder="Najmanje 6 znakova" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
+        </label>
+
+        {authMode === "register" && <label className="mt-4 block text-sm font-semibold">
+          Potvrda lozinke
+          <input value={authPasswordConfirm} onChange={(e) => setAuthPasswordConfirm(e.target.value)} type="password" autoComplete="new-password" placeholder="Ponovi lozinku" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
+        </label>}
+
         <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-secondary/40 p-4">
           <input type="checkbox" checked={authRulesAccepted} onChange={(e) => setAuthRulesAccepted(e.target.checked)} className="mt-1 h-4 w-4 accent-red-700" />
           <span className="text-sm">Prihvaćam <button type="button" onClick={() => setScreen("rules")} className="font-semibold text-accent underline">Pravilnik o igranju kvizova</button>.</span>
         </label>
+
         {error && <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
-        <div className="mt-6 flex gap-3">
-          <button disabled={authLoading} onClick={() => setAuthOpen(false)} className="patria-button flex-1">Odustani</button>
-          <button disabled={authLoading} onClick={submitAuth} className="patria-button-accent flex-1">{authLoading ? "Šaljem..." : "Nastavi"}</button>
+
+        <button disabled={authLoading} onClick={submitAuth} className="patria-button-accent mt-5 w-full">
+          {authLoading ? "Obrađujem..." : authMode === "login" ? "Prijavi se" : "Registriraj se"}
+        </button>
+
+        {authMode === "login" && <button disabled={authLoading} onClick={resetPassword} className="mt-3 w-full text-center text-sm font-semibold text-accent hover:underline">Zaboravili ste lozinku?</button>}
+
+        <div className="mt-5 text-center text-sm text-muted-foreground">
+          {authMode === "login" ? "Nemate račun?" : "Već imate račun?"}{" "}
+          <button type="button" onClick={() => { setError(""); setAuthMode(authMode === "login" ? "register" : "login"); }} className="font-semibold text-accent hover:underline">
+            {authMode === "login" ? "Registrirajte se" : "Prijavite se"}
+          </button>
         </div>
-        <p className="mt-4 text-center text-xs text-muted-foreground">Novi korisnik se može registrirati istim postupkom.</p>
       </div>
     </div>}
 
