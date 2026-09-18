@@ -1,4 +1,4 @@
-const CACHE_NAME = "patriasoul-kviz-v2";
+const CACHE_NAME = "patriasoul-kviz-v4";
 const APP_SHELL = ["/kviz/", "/kviz/index.html", "/kviz/manifest.webmanifest", "/kviz/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
