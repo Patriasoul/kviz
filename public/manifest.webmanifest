@@ -10,10 +10,10 @@
   "theme_color": "#193452",
   "icons": [
     {
-      "src": "/kviz/icons/icon.svg",
+      "src": "https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
