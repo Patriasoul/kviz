@@ -1,0 +1,12 @@
+{
+  "name": "PatriaSoul — Hrvatski kviz",
+  "short_name": "PatriaSoul",
+  "description": "Hrvatski kviz, Brani svoj grad i Dnevni kviz.",
+  "lang": "hr",
+  "start_url": "/kviz/",
+  "scope": "/kviz/",
+  "display": "standalone",
+  "background_color": "#193452",
+  "theme_color": "#193452",
+  "icons": [{ "src": "/kviz/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
