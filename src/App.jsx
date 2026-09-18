@@ -5,7 +5,7 @@ import QuizPlayer from "./pages/QuizPlayer";
 import { fetchCities, fetchCityQuestions, shuffle } from "./lib/cityQuiz";
 import { fetchMainQuizQuestions, getMainQuizCount } from "./lib/mainQuiz";
 import { fetchDailyQuizQuestions, getDailyQuizKey } from "./lib/dailyQuiz";
-import { getLeaderboard, getMyResults, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
+import { getLeaderboard, getMyResults, getMyResultStats, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
 import { supabase } from "./lib/supabase";
 
 const categories = [
@@ -50,13 +50,17 @@ export default function App() {
   const [dailyPlayed, setDailyPlayed] = useState(false);
   const [loadingDaily, setLoadingDaily] = useState(false);
   const [accountResults, setAccountResults] = useState([]);
+  const [accountStatsResults, setAccountStatsResults] = useState([]);
+  const [accountResultCount, setAccountResultCount] = useState(0);
+  const [accountPage, setAccountPage] = useState(1);
   const [loadingAccount, setLoadingAccount] = useState(false);
+  const accountPageSize = 20;
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installHelp, setInstallHelp] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
   const accountStats = (() => {
-    const results = Array.isArray(accountResults) ? accountResults : [];
+    const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
     const played = results.length;
     const correct = results.reduce((sum, r) => sum + Number(r.score || 0), 0);
     const total = results.reduce((sum, r) => sum + Number(r.total || 0), 0);
@@ -283,12 +287,38 @@ export default function App() {
     }
     setError("");
     setScreen("account");
+    setAccountPage(1);
     setLoadingAccount(true);
     try {
-      setAccountResults(await getMyResults(20));
+      const [pageResult, statsResult] = await Promise.all([
+        getMyResults(1, accountPageSize),
+        getMyResultStats(),
+      ]);
+      setAccountResults(pageResult.data);
+      setAccountResultCount(pageResult.count);
+      setAccountStatsResults(statsResult);
     } catch (e) {
       setError(e.message || "Podaci računa trenutno se ne mogu učitati.");
       setAccountResults([]);
+      setAccountStatsResults([]);
+      setAccountResultCount(0);
+    } finally {
+      setLoadingAccount(false);
+    }
+  };
+
+  const loadAccountPage = async (page) => {
+    if (!user) return;
+    const totalPages = Math.max(1, Math.ceil(accountResultCount / accountPageSize));
+    const nextPage = Math.min(Math.max(1, page), totalPages);
+    setLoadingAccount(true);
+    try {
+      const pageResult = await getMyResults(nextPage, accountPageSize);
+      setAccountResults(pageResult.data);
+      setAccountResultCount(pageResult.count);
+      setAccountPage(nextPage);
+    } catch (e) {
+      setError(e.message || "Rezultati se trenutno ne mogu učitati.");
     } finally {
       setLoadingAccount(false);
     }
@@ -707,13 +737,13 @@ export default function App() {
             <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-left sm:min-w-[150px]">
               <p className="text-xs uppercase tracking-wider text-white/60">Najbolji rezultat</p>
               <p className="mt-1 text-2xl font-bold text-white">{accountStats.best.toFixed(0)}%</p>
-              <p className="text-xs text-white/55">iz učitanih rezultata</p>
+              <p className="text-xs text-white/55">iz cijele povijesti</p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
-          <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Odigrano</p><p className="mt-1 text-3xl font-bold">{accountStats.played}</p><p className="mt-1 text-xs text-muted-foreground">zadnjih 20</p></div>
+          <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Odigrano</p><p className="mt-1 text-3xl font-bold">{accountStats.played}</p><p className="mt-1 text-xs text-muted-foreground">ukupno</p></div>
           <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Točnost</p><p className="mt-1 text-3xl font-bold">{accountStats.accuracy.toFixed(0)}%</p><p className="mt-1 text-xs text-muted-foreground">{accountStats.correct} / {accountStats.total} odgovora</p></div>
           <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Brani svoj grad</p><p className="mt-1 text-3xl font-bold">{accountStats.city}</p><p className="mt-1 text-xs text-muted-foreground">odigranih rundi</p></div>
           <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Dnevni kviz</p><p className="mt-1 text-3xl font-bold">{accountStats.daily}</p><p className="mt-1 text-xs text-muted-foreground">odigranih dana</p></div>
@@ -750,7 +780,7 @@ export default function App() {
         <section className="patria-card overflow-hidden">
           <div className="border-b border-border bg-secondary/40 px-6 py-5">
             <div className="flex items-center justify-between gap-3">
-              <div><h2 className="text-xl font-bold">Moji rezultati</h2><p className="mt-1 text-sm text-muted-foreground">Posljednjih 20 spremljenih rezultata.</p></div>
+              <div><h2 className="text-xl font-bold">Moji rezultati</h2><p className="mt-1 text-sm text-muted-foreground">Svi rezultati su spremljeni. Prikazano 20 po stranici · ukupno {accountResultCount}.</p></div>
               <Trophy className="hidden h-6 w-6 text-accent sm:block" />
             </div>
           </div>
@@ -765,6 +795,29 @@ export default function App() {
                   <div className="shrink-0 text-right"><p className="font-bold text-accent">{r.score} / {r.total}</p><p className="text-xs text-muted-foreground">{Number(r.percentage ?? ((r.score / Math.max(r.total, 1)) * 100)).toFixed(0)}%</p></div>
                 </div>;
               })}
+            </div>
+          )}
+          {accountResultCount > accountPageSize && !loadingAccount && (
+            <div className="flex flex-col gap-3 border-t border-border bg-secondary/30 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <p className="text-sm text-muted-foreground">
+                Stranica {accountPage} od {Math.max(1, Math.ceil(accountResultCount / accountPageSize))}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => loadAccountPage(accountPage - 1)}
+                  disabled={accountPage === 1}
+                  className="patria-button disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" /> Prethodna
+                </button>
+                <button
+                  onClick={() => loadAccountPage(accountPage + 1)}
+                  disabled={accountPage >= Math.ceil(accountResultCount / accountPageSize)}
+                  className="patria-button disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Sljedeća <ArrowRight className="ml-2 h-4 w-4" />
+                </button>
+              </div>
             </div>
           )}
         </section>
