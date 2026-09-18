@@ -222,7 +222,10 @@
     transition: transform .2s ease;
   }
 
-  .patria-nav-link:hover::after { transform: scaleX(1); }\n\n  .patria-mobile-menu-button,\n  .patria-mobile-nav { display: none; }
+  .patria-nav-link:hover::after { transform: scaleX(1); }
+
+  .patria-mobile-menu-button,
+  .patria-mobile-nav { display: none; }
 
   .patria-hero {
     position: relative;
