@@ -7,6 +7,7 @@ import { fetchMainQuizQuestions, getMainQuizCount } from "./lib/mainQuiz";
 import { fetchDailyQuizQuestions, getDailyQuizKey } from "./lib/dailyQuiz";
 import { getLeaderboard, getMyResults, getMyResultStats, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
 import { getMyProfile, saveMyNickname } from "./lib/profile";
+import { getMyProgress } from "./lib/progress";
 import { supabase } from "./lib/supabase";
 
 const categories = [
@@ -63,6 +64,7 @@ export default function App() {
   const [nicknameOpen, setNicknameOpen] = useState(false);
   const [nickname, setNickname] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
+  const [playerProgress, setPlayerProgress] = useState([]);
 
   const accountStats = (() => {
     const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
@@ -79,6 +81,26 @@ export default function App() {
     const daily = results.filter((r) => r.quiz_type === "daily").length;
     return { played, correct, total, accuracy, best, city, croatian, daily };
   })();
+
+  const badgeMilestones = [
+    [10, "Čuvar početaka", "Prvi korak u čuvanju hrvatskog znanja."],
+    [20, "Istraživač Hrvatske", "Upoznaješ Hrvatsku kroz igru i znanje."],
+    [30, "Čuvar baštine", "Baština više nije samo prošlost — čuvaš je znanjem."],
+    [40, "Čuvar Domovine", "Znanje, povijest i identitet postaju tvoj put."],
+    [50, "PatriaSoul znalac", "Dosegnuo si polovicu puta do najviše značke."],
+    [60, "Čuvar znanja", "Svoje znanje gradiš i prenosiš dalje."],
+    [70, "PatriaSoul učitelj", "Iskustvo pretvaraš u trajno znanje."],
+    [80, "Čuvar identiteta", "Hrvatska, povijest i baština postaju dio tvog rezultata."],
+    [90, "PatriaSoul legenda", "Još samo jedan korak do najviše značke."],
+    [100, "Čuvar nasljeđa", "Najviša PatriaSoul značka — čuvar priče koja se prenosi dalje."]
+  ];
+  const totalPlayerXp = playerProgress.reduce((sum, row) => sum + Number(row.xp || 0), 0);
+  const playerLevel = Math.min(100, Math.max(1, Math.floor(totalPlayerXp / 100) + 1));
+  const currentBadge = [...badgeMilestones].reverse().find(([level]) => playerLevel >= level) || [0, "PatriaSoul početnik", "Tvoj put tek počinje."];
+  const nextBadge = badgeMilestones.find(([level]) => playerLevel < level) || null;
+  const xpIntoLevel = totalPlayerXp % 100;
+  const xpToNextLevel = playerLevel >= 100 ? 0 : 100 - xpIntoLevel;
+  const xpToNextBadge = nextBadge ? Math.max(0, nextBadge[0] * 100 - totalPlayerXp) : 0;
 
   const accountDisplayName = profile?.display_name || "PatriaSoul igrač";
   const accountUsername = profile?.display_name || "";
@@ -332,13 +354,15 @@ export default function App() {
     setAccountPage(1);
     setLoadingAccount(true);
     try {
-      const [pageResult, statsResult] = await Promise.all([
+      const [pageResult, statsResult, progressResult] = await Promise.all([
         getMyResults(1, accountPageSize),
         getMyResultStats(),
+        getMyProgress(),
       ]);
       setAccountResults(pageResult.data);
       setAccountResultCount(pageResult.count);
       setAccountStatsResults(statsResult);
+      setPlayerProgress(progressResult);
     } catch (e) {
       setError(e.message || "Podaci računa trenutno se ne mogu učitati.");
       setAccountResults([]);
