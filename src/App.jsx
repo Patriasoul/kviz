@@ -48,7 +48,9 @@ export default function App() {
   const [authRulesAccepted, setAuthRulesAccepted] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [dailyPlayed, setDailyPlayed] = useState(false);
-  const [loadingDaily, setLoadingDaily] = useState(false);\n  const [accountResults, setAccountResults] = useState([]);\n  const [loadingAccount, setLoadingAccount] = useState(false);
+  const [loadingDaily, setLoadingDaily] = useState(false);
+  const [accountResults, setAccountResults] = useState([]);
+  const [loadingAccount, setLoadingAccount] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installHelp, setInstallHelp] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
