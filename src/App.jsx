@@ -247,6 +247,24 @@ export default function App() {
     setUser(null);
   };
 
+  const openAccount = async () => {
+    if (!user) {
+      signIn();
+      return;
+    }
+    setError("");
+    setScreen("account");
+    setLoadingAccount(true);
+    try {
+      setAccountResults(await getMyResults(20));
+    } catch (e) {
+      setError(e.message || "Podaci računa trenutno se ne mogu učitati.");
+      setAccountResults([]);
+    } finally {
+      setLoadingAccount(false);
+    }
+  };
+
   const openCities = async () => {
     if (!user) {
       requireAuth(openCities);
