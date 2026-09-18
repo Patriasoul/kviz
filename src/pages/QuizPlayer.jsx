@@ -44,7 +44,9 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
         setAnswered(false);
         setRemaining(timeLimit);
       } else {
-        playFinish();\n        playResult();\n        onComplete?.({ score: scoreRef.current, total: questions.length, timeSeconds: Math.floor((Date.now() - startRef.current) / 1000) });
+        playFinish();
+        playResult();
+        onComplete?.({ score: scoreRef.current, total: questions.length, timeSeconds: Math.floor((Date.now() - startRef.current) / 1000) });
       }
     }, 1100);
     return () => clearTimeout(timer);
