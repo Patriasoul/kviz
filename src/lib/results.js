@@ -31,6 +31,38 @@ export async function getMyResults(limit = 20) {
   return data ?? [];
 }
 
+export async function hasPlayedDailyQuiz(userId) {
+  if (!supabase || !userId) return false;
+
+  const { data, error } = await supabase
+    .from("quiz_results")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("quiz_type", "daily")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Zagreb",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+
+  return (data ?? []).some((row) => {
+    const created = new Date(row.created_at);
+    const rowDay = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Zagreb",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(created);
+    return rowDay === today;
+  });
+}
+
 export async function getLeaderboard(quizType = null, limit = 50) {
   if (!supabase) return [];
   const { data, error } = await supabase.rpc("get_leaderboard", {
