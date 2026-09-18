@@ -360,12 +360,6 @@ export default function App() {
             Nastavi s Googleom
           </button>
 
-          <button disabled={authLoading} onClick={() => signInWithProvider("custom:tiktok")} className="flex w-full items-center justify-center gap-3 rounded-lg border border-border bg-background px-4 py-3 font-semibold transition hover:bg-secondary disabled:opacity-60">
-            <span className="flex h-5 w-5 items-center justify-center text-foreground" aria-hidden="true">
-              <svg viewBox="0 0 24 24" className="h-5 w-5"><path fill="currentColor" d="M15.6 3c.23 1.86 1.27 3.36 3.2 4.1v2.72a8.24 8.24 0 0 1-3.18-1.04v6.28c0 4.01-2.74 6.2-6.02 6.2-3.02 0-5.35-2.08-5.35-5.12 0-3.26 2.63-5.45 6.01-5.45.28 0 .56.02.83.06v2.82a4.08 4.08 0 0 0-.83-.08c-1.56 0-3.04.93-3.04 2.62 0 1.48 1.08 2.43 2.47 2.43 1.58 0 2.9-.93 2.9-3.27V3h3.01Z"/></svg>
-            </span>
-            Nastavi s TikTokom
-          </button>
         </div>
 
         <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground"><span className="h-px flex-1 bg-border" /> ili <span className="h-px flex-1 bg-border" /></div>
