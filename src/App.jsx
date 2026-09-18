@@ -37,7 +37,10 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [leaderboardType, setLeaderboardType] = useState(null);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
-  const [rulesAccepted, setRulesAccepted] = useState(() => localStorage.getItem("patriasoul_rules_accepted") === "1");
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authRulesAccepted, setAuthRulesAccepted] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -58,26 +61,51 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
-  const acceptRules = () => {
-    localStorage.setItem("patriasoul_rules_accepted", "1");
-    setRulesAccepted(true);
-    setScreen("home");
+  const requireAuth = (action) => {
+    if (user) {
+      action();
+      return true;
+    }
+    setAuthRulesAccepted(false);
+    setAuthEmail("");
+    setError("");
+    setAuthOpen(true);
+    return false;
   };
 
-  const signIn = async () => {
+  const signIn = () => {
+    setAuthRulesAccepted(false);
+    setAuthEmail("");
     setError("");
-    if (!supabase) {
-      setError("Supabase nije konfiguriran. Dodaj VITE_SUPABASE_URL i VITE_SUPABASE_ANON_KEY.");
+    setAuthOpen(true);
+  };
+
+  const submitAuth = async () => {
+    setError("");
+    if (!authRulesAccepted) {
+      setError("Za nastavak moraš prihvatiti Pravilnik o igranju kvizova.");
       return;
     }
-    const email = window.prompt("Upiši svoju e-mail adresu:");
-    if (!email) return;
+    if (!supabase) {
+      setError("Supabase nije konfiguriran.");
+      return;
+    }
+    if (!authEmail.trim()) {
+      setError("Upiši svoju e-mail adresu.");
+      return;
+    }
+    setAuthLoading(true);
     const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
+      email: authEmail.trim(),
       options: { emailRedirectTo: window.location.origin },
     });
-    if (authError) setError(authError.message);
-    else setError("Provjeri e-mail i otvori poveznicu za prijavu.");
+    setAuthLoading(false);
+    if (authError) {
+      setError(authError.message);
+      return;
+    }
+    setAuthOpen(false);
+    setError("Poslan je e-mail za prijavu/registraciju. Otvori poveznicu iz e-maila i zatim pokreni kviz.");
   };
 
   const signOut = async () => {
@@ -86,8 +114,8 @@ export default function App() {
   };
 
   const openCities = async () => {
-    if (!rulesAccepted) {
-      setScreen("rules");
+    if (!user) {
+      requireAuth(openCities);
       return;
     }
     setError("");
@@ -119,8 +147,8 @@ export default function App() {
   };
 
   const startCity = async (selectedCity) => {
-    if (!rulesAccepted) {
-      setScreen("rules");
+    if (!user) {
+      requireAuth(() => startCity(selectedCity));
       return;
     }
     setError("");
@@ -144,8 +172,8 @@ export default function App() {
   };
 
   const startMainCategory = async (category) => {
-    if (!rulesAccepted) {
-      setScreen("rules");
+    if (!user) {
+      requireAuth(() => startMainCategory(category));
       return;
     }
     setError("");
@@ -223,6 +251,30 @@ export default function App() {
       </div>
     </header>
 
+    {authOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4" onClick={() => !authLoading && setAuthOpen(false)}>
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-6">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-accent">PatriaSoul račun</p>
+          <h2 className="mt-2 font-display text-3xl font-bold">Prijava ili registracija</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Za igranje kviza moraš imati račun i prihvatiti pravilnik.</p>
+        </div>
+        <label className="block text-sm font-semibold">
+          E-mail adresa
+          <input value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} type="email" autoComplete="email" placeholder="tvoj@email.com" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
+        </label>
+        <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-secondary/40 p-4">
+          <input type="checkbox" checked={authRulesAccepted} onChange={(e) => setAuthRulesAccepted(e.target.checked)} className="mt-1 h-4 w-4 accent-red-700" />
+          <span className="text-sm">Prihvaćam <button type="button" onClick={() => setScreen("rules")} className="font-semibold text-accent underline">Pravilnik o igranju kvizova</button>.</span>
+        </label>
+        {error && <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+        <div className="mt-6 flex gap-3">
+          <button disabled={authLoading} onClick={() => setAuthOpen(false)} className="patria-button flex-1">Odustani</button>
+          <button disabled={authLoading} onClick={submitAuth} className="patria-button-accent flex-1">{authLoading ? "Šaljem..." : "Nastavi"}</button>
+        </div>
+        <p className="mt-4 text-center text-xs text-muted-foreground">Novi korisnik se može registrirati istim postupkom.</p>
+      </div>
+    </div>}
+
     {screen === "rules" && <Pravilnik onBack={() => setScreen("home")} />}
 
     {screen === "home" && <main>
@@ -252,7 +304,7 @@ export default function App() {
       </section>
 
       <section className="border-y border-border bg-secondary/40"><div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h2 className="mt-2 text-3xl">Tri načina igranja.</h2><p className="mt-3 max-w-2xl text-muted-foreground">Hrvatski kviz, Brani svoj grad i Dnevni kviz odvojeni su sustavi s vlastitim pravilima i rezultatima.</p></div><ShieldCheck className="h-12 w-12 shrink-0 text-accent" /></div></section>
-      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6"><label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4"><input type="checkbox" checked={rulesAccepted} onChange={(e) => { setRulesAccepted(e.target.checked); if (e.target.checked) localStorage.setItem("patriasoul_rules_accepted", "1"); else localStorage.removeItem("patriasoul_rules_accepted"); }} className="mt-1 h-4 w-4 accent-red-700" /><span className="text-sm">Prihvaćam <button onClick={(e) => { e.preventDefault(); setScreen("rules"); }} className="font-semibold text-accent underline">Pravilnik o igranju kvizova</button>.</span></label></section>
+
     </main>}
 
     {screen === "cities" && <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">Brani svoj grad</p><h1 className="mt-2 font-display text-4xl font-bold">Odaberi grad</h1><p className="mt-2 text-muted-foreground">Svaki grad ima vlastiti paket od 75 pitanja.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
