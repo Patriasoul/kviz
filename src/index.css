@@ -224,8 +224,7 @@
 
   .patria-nav-link:hover::after { transform: scaleX(1); }
 
-  .patria-mobile-menu-button,
-  .patria-mobile-nav { display: none; }
+  .patria-mobile-menu { display: none; }
 
   .patria-hero {
     position: relative;
@@ -420,6 +419,18 @@
 
 @media (max-width: 900px) {
   .patria-nav-desktop { display: none; }
+
+  .patria-mobile-menu {
+    display: block;
+    position: relative;
+  }
+
+  .patria-mobile-menu > summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .patria-mobile-menu > summary::-webkit-details-marker { display: none; }
 
   .patria-mobile-menu-button {
     display: inline-flex;
