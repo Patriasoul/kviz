@@ -55,6 +55,35 @@ export default function App() {
   const [installHelp, setInstallHelp] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  const accountStats = (() => {
+    const results = Array.isArray(accountResults) ? accountResults : [];
+    const played = results.length;
+    const correct = results.reduce((sum, r) => sum + Number(r.score || 0), 0);
+    const total = results.reduce((sum, r) => sum + Number(r.total || 0), 0);
+    const accuracy = total ? (correct / total) * 100 : 0;
+    const best = results.reduce((bestScore, r) => {
+      const percentage = Number(r.percentage ?? ((Number(r.score || 0) / Math.max(Number(r.total || 1), 1)) * 100));
+      return Math.max(bestScore, percentage);
+    }, 0);
+    const city = results.filter((r) => r.quiz_type === "city").length;
+    const croatian = results.filter((r) => r.quiz_type === "croatian").length;
+    const daily = results.filter((r) => r.quiz_type === "daily").length;
+    return { played, correct, total, accuracy, best, city, croatian, daily };
+  })();
+
+  const accountDisplayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.user_metadata?.username ||
+    user?.email?.split("@")[0] ||
+    "PatriaSoul igrač";
+  const accountUsername = user?.user_metadata?.username || "";
+  const accountAvatar =
+    user?.user_metadata?.avatar_url ||
+    user?.user_metadata?.picture ||
+    user?.user_metadata?.photo_url ||
+    "";
+
   useEffect(() => {
     if (!supabase) return undefined;
     supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
@@ -650,48 +679,89 @@ export default function App() {
     {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">{result.saved ? "Rezultat je spremljen." : user ? "Rezultat se obrađuje." : "Rezultat je prikazan."}</p><p className="mt-2 text-muted-foreground">{result.saveError || (user ? "Tvoj rezultat je povezan s tvojim profilom." : "Prijavi se kako bi se rezultat mogao spremiti u tvoj račun.")}</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">{activeQuizType !== "daily" && <button onClick={restartQuiz} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Igraj ponovno</button>}
           {activeQuizType === "daily" && <button onClick={() => setScreen("daily")} className="patria-button-accent">Dnevni kviz</button>}<button onClick={activeQuizType === "city" ? () => setScreen("cities") : home} className="patria-button">{activeQuizType === "city" ? "Odaberi drugi grad" : "Odaberi kategoriju"}</button><button onClick={() => openLeaderboard(activeQuizType)} className="patria-button">Rang-lista</button></div></div></div></main>}
 
-    {screen === "account" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
-      <div className="mb-8 flex items-center justify-between gap-4">
+    {screen === "account" && <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul račun</p>
-          <h1 className="mt-2 font-display text-4xl font-bold">Moj račun</h1>
-          <p className="mt-2 text-muted-foreground">Tvoj profil i spremljeni rezultati igranja.</p>
+          <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">Moj račun</h1>
+          <p className="mt-2 text-muted-foreground">Tvoj PatriaSoul profil, statistika i spremljeni rezultati.</p>
         </div>
-        <button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button>
+        <button onClick={home} className="patria-button self-start sm:self-auto"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button>
       </div>
 
       {error && <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
 
-      <div className="grid gap-6 lg:grid-cols-[.9fr_1.6fr]">
-        <section className="patria-card p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground"><UserRound className="h-7 w-7" /></div>
-            <div className="min-w-0">
-              <h2 className="truncate text-xl font-bold">{user?.user_metadata?.full_name || user?.user_metadata?.username || "PatriaSoul igrač"}</h2>
-              <p className="truncate text-sm text-muted-foreground">{user?.email || "Prijavljen korisnik"}</p>
+      <section className="patria-card overflow-hidden">
+        <div className="relative bg-primary px-6 py-7 text-primary-foreground sm:px-8">
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "linear-gradient(135deg, transparent 0%, transparent 48%, rgba(255,255,255,.8) 49%, transparent 50%, transparent 100%)", backgroundSize: "34px 34px" }} />
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/30 bg-white/10 shadow-lg">
+              {accountAvatar ? <img src={accountAvatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : <UserRound className="h-9 w-9 text-white/80" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold uppercase tracking-[.16em] text-red-200">PatriaSoul igrač</p>
+              <h2 className="mt-1 truncate text-2xl font-bold sm:text-3xl">{accountDisplayName}</h2>
+              <p className="mt-1 truncate text-sm text-white/70">{user?.email || "Prijavljen korisnik"}</p>
+              {accountUsername && <p className="mt-2 text-sm text-white/80">@{accountUsername}</p>}
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-left sm:min-w-[150px]">
+              <p className="text-xs uppercase tracking-wider text-white/60">Najbolji rezultat</p>
+              <p className="mt-1 text-2xl font-bold text-white">{accountStats.best.toFixed(0)}%</p>
+              <p className="text-xs text-white/55">iz učitanih rezultata</p>
             </div>
           </div>
-          {user?.user_metadata?.username && <div className="mt-5 rounded-lg bg-secondary/50 p-3 text-sm"><span className="text-muted-foreground">Korisničko ime:</span> <strong>{user.user_metadata.username}</strong></div>}
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <div className="rounded-lg border border-border p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Odigrano</p><p className="mt-1 text-2xl font-bold">{accountResults.length}</p></div>
-            <div className="rounded-lg border border-border p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Dnevni</p><p className="mt-1 text-2xl font-bold">{accountResults.filter((r) => r.quiz_type === "daily").length}</p></div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-4">
+          <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Odigrano</p><p className="mt-1 text-3xl font-bold">{accountStats.played}</p><p className="mt-1 text-xs text-muted-foreground">zadnjih 20</p></div>
+          <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Točnost</p><p className="mt-1 text-3xl font-bold">{accountStats.accuracy.toFixed(0)}%</p><p className="mt-1 text-xs text-muted-foreground">{accountStats.correct} / {accountStats.total} odgovora</p></div>
+          <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Brani svoj grad</p><p className="mt-1 text-3xl font-bold">{accountStats.city}</p><p className="mt-1 text-xs text-muted-foreground">odigranih rundi</p></div>
+          <div className="bg-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Dnevni kviz</p><p className="mt-1 text-3xl font-bold">{accountStats.daily}</p><p className="mt-1 text-xs text-muted-foreground">odigranih dana</p></div>
+        </div>
+      </section>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[.8fr_1.7fr]">
+        <section className="space-y-6">
+          <div className="patria-card p-6">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary"><Trophy className="h-5 w-5" /></div>
+              <div><h2 className="font-bold">Tvoj napredak</h2><p className="text-sm text-muted-foreground">Pregled načina na koje igraš.</p></div>
+            </div>
+            <div className="mt-5 space-y-4">
+              <div><div className="mb-1 flex justify-between text-sm"><span>Hrvatski kviz</span><strong>{accountStats.croatian}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(accountStats.croatian * 10, 100)}%` }} /></div></div>
+              <div><div className="mb-1 flex justify-between text-sm"><span>Brani svoj grad</span><strong>{accountStats.city}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(accountStats.city * 10, 100)}%` }} /></div></div>
+              <div><div className="mb-1 flex justify-between text-sm"><span>Dnevni kviz</span><strong>{accountStats.daily}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(accountStats.daily * 10, 100)}%` }} /></div></div>
+            </div>
           </div>
-          <button onClick={signOut} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-3 font-semibold transition hover:bg-secondary"><LogOut className="h-4 w-4" /> Odjavi se</button>
+
+          <div className="patria-card p-6">
+            <h2 className="font-bold">Brzi pristup</h2>
+            <div className="mt-4 grid gap-2">
+              <button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-button w-full justify-center">Hrvatski kviz</button>
+              <button onClick={openCities} className="patria-button w-full justify-center"><MapPin className="mr-2 h-4 w-4" /> Brani svoj grad</button>
+              <button onClick={openDaily} className="patria-button w-full justify-center">📅 Dnevni kviz</button>
+              <button onClick={() => openLeaderboard()} className="patria-button w-full justify-center"><Medal className="mr-2 h-4 w-4" /> Rang-lista</button>
+            </div>
+          </div>
+
+          <button onClick={signOut} className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-3 font-semibold transition hover:bg-secondary"><LogOut className="h-4 w-4" /> Odjavi se</button>
         </section>
 
         <section className="patria-card overflow-hidden">
           <div className="border-b border-border bg-secondary/40 px-6 py-5">
-            <h2 className="text-xl font-bold">Moji rezultati</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Posljednjih 20 spremljenih rezultata.</p>
+            <div className="flex items-center justify-between gap-3">
+              <div><h2 className="text-xl font-bold">Moji rezultati</h2><p className="mt-1 text-sm text-muted-foreground">Posljednjih 20 spremljenih rezultata.</p></div>
+              <Trophy className="hidden h-6 w-6 text-accent sm:block" />
+            </div>
           </div>
           {loadingAccount ? <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam rezultate...</div> : accountResults.length === 0 ? (
-            <div className="p-10 text-center"><Trophy className="mx-auto h-10 w-10 text-accent" /><h3 className="mt-4 text-xl font-bold">Još nema spremljenih rezultata</h3><p className="mt-2 text-sm text-muted-foreground">Odigraj kviz i tvoj rezultat će se pojaviti ovdje.</p></div>
+            <div className="p-10 text-center"><Trophy className="mx-auto h-10 w-10 text-accent" /><h3 className="mt-4 text-xl font-bold">Još nema spremljenih rezultata</h3><p className="mt-2 text-sm text-muted-foreground">Odigraj prvi kviz i rezultat će se automatski pojaviti na tvom profilu.</p></div>
           ) : (
             <div className="divide-y divide-border">
               {accountResults.map((r) => {
                 const typeLabel = r.quiz_type === "daily" ? "Dnevni kviz" : r.quiz_type === "city" ? `Brani svoj grad${r.city_slug ? `: ${r.city_slug}` : ""}` : r.category ? `Hrvatski kviz · ${r.category}` : "Hrvatski kviz";
-                return <div key={r.id} className="flex items-center justify-between gap-4 px-6 py-4">
-                  <div className="min-w-0"><p className="truncate font-semibold">{typeLabel}</p><p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("hr-HR")}</p></div>
+                return <div key={r.id} className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6">
+                  <div className="min-w-0"><p className="truncate font-semibold">{typeLabel}</p><p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("hr-HR")}{r.time_seconds != null ? ` · ${r.time_seconds}s` : ""}</p></div>
                   <div className="shrink-0 text-right"><p className="font-bold text-accent">{r.score} / {r.total}</p><p className="text-xs text-muted-foreground">{Number(r.percentage ?? ((r.score / Math.max(r.total, 1)) * 100)).toFixed(0)}%</p></div>
                 </div>;
               })}
