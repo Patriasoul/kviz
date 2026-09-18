@@ -6,6 +6,7 @@ import { fetchCities, fetchCityQuestions, shuffle } from "./lib/cityQuiz";
 import { fetchMainQuizQuestions, getMainQuizCount } from "./lib/mainQuiz";
 import { fetchDailyQuizQuestions, getDailyQuizKey } from "./lib/dailyQuiz";
 import { getLeaderboard, getMyResults, getMyResultStats, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
+import { getMyProfile, saveMyNickname } from "./lib/profile";
 import { supabase } from "./lib/supabase";
 
 const categories = [
@@ -58,6 +59,10 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installHelp, setInstallHelp] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [nicknameOpen, setNicknameOpen] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [savingNickname, setSavingNickname] = useState(false);
 
   const accountStats = (() => {
     const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
@@ -75,13 +80,8 @@ export default function App() {
     return { played, correct, total, accuracy, best, city, croatian, daily };
   })();
 
-  const accountDisplayName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.user_metadata?.username ||
-    user?.email?.split("@")[0] ||
-    "PatriaSoul igrač";
-  const accountUsername = user?.user_metadata?.username || "";
+  const accountDisplayName = profile?.display_name || "PatriaSoul igrač";
+  const accountUsername = profile?.display_name || "";
   const accountAvatar =
     user?.user_metadata?.avatar_url ||
     user?.user_metadata?.picture ||
@@ -90,10 +90,52 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return undefined;
-    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setUser(session?.user ?? null));
+
+    const loadProfile = async (currentUser) => {
+      setUser(currentUser ?? null);
+      if (!currentUser) {
+        setProfile(null);
+        setNicknameOpen(false);
+        return;
+      }
+
+      try {
+        const currentProfile = await getMyProfile();
+        setProfile(currentProfile);
+        if (!currentProfile?.display_name?.trim()) {
+          setNickname("");
+          setNicknameOpen(true);
+        }
+      } catch (profileError) {
+        setError(profileError.message || "Profil se nije mogao učitati.");
+      }
+    };
+
+    supabase.auth.getUser().then(({ data }) => loadProfile(data.user ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadProfile(session?.user ?? null);
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  const submitNickname = async () => {
+    const clean = nickname.trim();
+    if (clean.length < 3 || clean.length > 24) {
+      setError("Nadimak mora imati između 3 i 24 znaka.");
+      return;
+    }
+    setSavingNickname(true);
+    setError("");
+    try {
+      const saved = await saveMyNickname(clean);
+      setProfile(saved);
+      setNicknameOpen(false);
+    } catch (nicknameError) {
+      setError(nicknameError.message || "Nadimak nije spremljen.");
+    } finally {
+      setSavingNickname(false);
+    }
+  };
 
   useEffect(() => {
     const media = window.matchMedia("(display-mode: standalone)");
