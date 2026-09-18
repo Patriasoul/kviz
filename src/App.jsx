@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen, Menu, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
 import { fetchCities, fetchCityQuestions, shuffle } from "./lib/cityQuiz";
@@ -54,7 +54,6 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installHelp, setInstallHelp] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -247,8 +246,6 @@ export default function App() {
     await supabase?.auth.signOut();
     setUser(null);
   };
-
-  const closeMobileNav = () => setMobileNavOpen(false);
 
   const openAccount = async () => {
     if (!user) {
@@ -473,19 +470,18 @@ export default function App() {
           {user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> Moj račun</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Moj račun</button>}
         </nav>
 
-        <button type="button" className="patria-mobile-menu-button" onClick={() => setMobileNavOpen((open) => !open)} aria-expanded={mobileNavOpen} aria-controls="patria-mobile-nav" aria-label={mobileNavOpen ? "Zatvori izbornik" : "Otvori izbornik"}>
-          {mobileNavOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <details className="patria-mobile-menu">
+        <summary className="patria-mobile-menu-button" aria-label="Otvori izbornik"><span aria-hidden="true">☰</span><span className="sr-only">Izbornik</span></summary>
+        <nav id="patria-mobile-nav" className="patria-mobile-nav">
+          <button onClick={home} className="patria-mobile-nav-link">⌂ <span>Početna</span></button>
+          <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" }); }} className="patria-mobile-nav-link"><BookOpen className="h-5 w-5" /><span>Hrvatski kviz</span></button>
+          <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCities(); }} className="patria-mobile-nav-link"><MapPin className="h-5 w-5" /><span>Brani svoj grad</span></button>
+          <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openDaily(); }} className="patria-mobile-nav-link">📅 <span>Dnevni kviz</span></button>
+          <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openLeaderboard(); }} className="patria-mobile-nav-link"><Medal className="h-5 w-5" /><span>Rang-lista</span></button>
+          {user ? <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openAccount(); }} className="patria-mobile-nav-link"><UserRound className="h-5 w-5" /><span>Moj račun</span></button> : <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); signIn(); }} className="patria-mobile-nav-link"><LogIn className="h-5 w-5" /><span>Moj račun</span></button>}
+        </nav>
+      </details>
       </div>
-
-      {mobileNavOpen && <nav id="patria-mobile-nav" className="patria-mobile-nav">
-        <button onClick={home} className="patria-mobile-nav-link">⌂ <span>Početna</span></button>
-        <button onClick={() => { closeMobileNav(); document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" }); }} className="patria-mobile-nav-link"><BookOpen className="h-5 w-5" /><span>Hrvatski kviz</span></button>
-        <button onClick={openCities} className="patria-mobile-nav-link"><MapPin className="h-5 w-5" /><span>Brani svoj grad</span></button>
-        <button onClick={openDaily} className="patria-mobile-nav-link">📅 <span>Dnevni kviz</span></button>
-        <button onClick={() => openLeaderboard()} className="patria-mobile-nav-link"><Medal className="h-5 w-5" /><span>Rang-lista</span></button>
-        {user ? <button onClick={openAccount} className="patria-mobile-nav-link"><UserRound className="h-5 w-5" /><span>Moj račun</span></button> : <button onClick={() => { closeMobileNav(); signIn(); }} className="patria-mobile-nav-link"><LogIn className="h-5 w-5" /><span>Moj račun</span></button>}
-      </nav>}
     </header>
 
     <div className="patria-portal-bar"><div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6"><div className="flex items-center gap-2 text-sm text-white/70"><span className="hidden sm:inline">PatriaSoul Kviz</span><span className="hidden sm:inline text-white/30">·</span><span>Povratak na glavni portal</span></div><a href="https://patriasoul.github.io/" className="patria-portal-button" aria-label="Povratak na PatriaSoul portal"><ArrowLeft className="h-5 w-5" /> Povratak na PatriaSoul portal</a></div></div>
