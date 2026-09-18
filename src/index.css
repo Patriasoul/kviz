@@ -64,7 +64,7 @@
     background-position: center 130px;
     background-repeat: no-repeat;
     background-size: min(620px, 72vw) auto;
-    opacity: 0.10;
+    opacity: 0.14;
   }
 
   #root > * {
