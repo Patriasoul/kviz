@@ -95,7 +95,37 @@ const sections = [
     ],
   },
   {
-    title: "IV. BODOVANJE",
+    title: "IV. KORISNIČKI RAČUN, NADIMAK I PRIVATNOST",
+    paragraphs: [],
+  },
+  {
+    title: "Članak 19. — Korisnički račun",
+    paragraphs: [
+      "Za prijavu i upravljanje korisničkim računom može se koristiti e-mail adresa ili podržani vanjski pružatelj prijave.",
+      "E-mail adresa služi za prijavu i upravljanje računom te se ne prikazuje javno na rang-listi.",
+      "Korisnik je odgovoran za točnost i sigurnost podataka koje koristi za pristup svom računu.",
+    ],
+  },
+  {
+    title: "Članak 20. — Nadimak igrača",
+    paragraphs: [
+      "Svaki igrač može odabrati nadimak koji se koristi kao javno ime u kvizu, na profilu i na rang-listi.",
+      "Nadimak mora biti jedinstven među korisnicima kako bi se igrači mogli jasno razlikovati.",
+      "Nadimak mora imati između 3 i 24 znaka. Zauzeti nadimak nije moguće ponovno odabrati.",
+      "Korisnik može promijeniti svoj nadimak u svom računu, ako je novi nadimak slobodan.",
+      "E-mail adresa ostaje podatak za prijavu i ne zamjenjuje javni nadimak igrača.",
+    ],
+  },
+  {
+    title: "Članak 21. — Privatnost korisnika",
+    paragraphs: [
+      "PatriaSoul nastoji javne prikaze rezultata svesti na podatke potrebne za funkcionalnost igre, osobito nadimak, rezultat i podatke potrebne za rang-listu.",
+      "E-mail adresa nije javno prikazana na rang-listi. Podaci korisničkog računa i rezultati obrađuju se u skladu s objavljenom Politikom privatnosti.",
+    ],
+  },
+  {
+    title: "V. BODOVANJE",
+
     paragraphs: [],
   },
   {
