@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Clock, Volume2, VolumeX } from "lucide-react";
 import { getSoundEnabled, setSoundEnabled, playStart, playSelect, playCorrect, playWrong, playTick, playFinish, playResult } from "../lib/soundEffects";
+import { submitQuizAnswer } from "../lib/attempts";
 
 const LETTERS = ["A", "B", "C", "D"];
 
-export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20, onComplete, onQuit }) {
+export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20, attemptId, onComplete, onQuit }) {
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
   const [answered, setAnswered] = useState(false);
+  const [serverCorrectIndex, setServerCorrectIndex] = useState(null);
+  const [answerError, setAnswerError] = useState("");
   const [remaining, setRemaining] = useState(timeLimit);
   const [soundEnabled, setSoundEnabledState] = useState(getSoundEnabled);
   const startRef = useRef(Date.now());
@@ -33,8 +36,9 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
   useEffect(() => {
     if (!questions.length || answered) return undefined;
     if (remaining <= 0) {
-      setSelected(-1);
-      setAnswered(true);
+      submitQuizAnswer(attemptId, q.id, -1)
+        .then((response) => { setServerCorrectIndex(response.correctIndex); setAnswered(true); })
+        .catch((error) => setAnswerError(error.message || "Odgovor se nije mogao potvrditi."));
       return undefined;
     }
     const timer = setTimeout(() => setRemaining((v) => v - 1), 1000);
@@ -48,6 +52,8 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
         setIndex((v) => v + 1);
         setSelected(null);
         setAnswered(false);
+        setServerCorrectIndex(null);
+        setAnswerError("");
         setRemaining(timeLimit);
       } else {
         playFinish();
@@ -58,16 +64,24 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
     return () => clearTimeout(timer);
   }, [answered, index, questions.length, timeLimit, onComplete]);
 
-  const handleAnswer = (i) => {
-    if (answered || !q) return;
+  const handleAnswer = async (i) => {
+    if (answered || !q || !attemptId) return;
     setSelected(i);
-    setAnswered(true);
+    setAnswerError("");
     playSelect();
-    if (i === q.correctIndex) {
-      scoreRef.current += 1;
-      playCorrect();
-    } else {
-      playWrong();
+    try {
+      const response = await submitQuizAnswer(attemptId, q.id, i);
+      setServerCorrectIndex(response.correctIndex);
+      if (response.isCorrect) {
+        scoreRef.current += 1;
+        playCorrect();
+      } else {
+        playWrong();
+      }
+      setAnswered(true);
+    } catch (error) {
+      setSelected(null);
+      setAnswerError(error.message || "Odgovor se nije mogao potvrditi. Pokušaj ponovno.");
     }
   };
 
@@ -88,14 +102,15 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
             <h2 className="mb-6 min-h-[3.5rem] font-display text-xl font-semibold leading-snug sm:text-2xl">{q.question}</h2>
             <div className="grid gap-3">
               {q.answers.map((ans, i) => {
-                const isCorrect = i === q.correctIndex;
+                const isCorrect = i === serverCorrectIndex;
                 const isSelected = i === selected;
                 let cls = "border-white/15 bg-white/5 hover:border-white/30 hover:bg-white/10";
                 if (answered) cls = isCorrect ? "border-green-400 bg-green-400/15 text-white" : isSelected ? "border-red-500 bg-red-500/15 text-white" : "border-white/10 bg-white/5 opacity-50";
                 return <button key={`${q.id}-${i}`} onClick={() => handleAnswer(i)} disabled={answered} className={`flex w-full items-center gap-3 rounded-xl border-2 px-4 py-4 text-left transition-all ${cls} ${!answered ? "active:scale-[0.99]" : ""}`}><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-bold">{LETTERS[i]}</span><span className="flex-1 font-medium">{ans}</span>{answered && isCorrect && <Check className="h-5 w-5 text-green-400" />}{answered && isSelected && !isCorrect && <X className="h-5 w-5 text-red-400" />}</button>;
               })}
             </div>
-            {answered && <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">{selected === -1 ? "Vrijeme je isteklo. Odgovor se smatra netočnim." : selected === q.correctIndex ? "Točan odgovor!" : "Netočan odgovor. Točan odgovor je označen."}</div>}
+            {answerError && <div className="mt-6 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{answerError}</div>}
+            {answered && <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">{selected === -1 ? "Vrijeme je isteklo. Odgovor se smatra netočnim." : selected === serverCorrectIndex ? "Točan odgovor!" : "Netočan odgovor. Točan odgovor je označen."}</div>}
           </motion.div>
         </AnimatePresence>
         {onQuit && <button onClick={onQuit} className="mt-8 text-sm text-white/40 transition-colors hover:text-white/70">Odustani</button>}
