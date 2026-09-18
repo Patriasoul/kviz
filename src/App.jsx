@@ -441,7 +441,7 @@ export default function App() {
         setScreen("daily");
         throw new Error("Današnji Dnevni kviz već je odigran. Novi kviz bit će dostupan sutra.");
       }
-      const questions = await fetchDailyQuizQuestions();
+      const attempt = await startQuizAttempt({ quizType: "daily" });
       setCity(null);
       setActiveQuizType("daily");
       setActiveCategory(null);
