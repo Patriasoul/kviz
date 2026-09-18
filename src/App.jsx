@@ -4,7 +4,8 @@ import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
 import { fetchCities, fetchCityQuestions, shuffle } from "./lib/cityQuiz";
 import { fetchMainQuizQuestions, getMainQuizCount } from "./lib/mainQuiz";
-import { getLeaderboard, saveQuizResult } from "./lib/results";
+import { fetchDailyQuizQuestions, getDailyQuizKey } from "./lib/dailyQuiz";
+import { getLeaderboard, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
 import { supabase } from "./lib/supabase";
 
 const categories = [
@@ -46,6 +47,8 @@ export default function App() {
   const [authPasswordConfirm, setAuthPasswordConfirm] = useState("");
   const [authRulesAccepted, setAuthRulesAccepted] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [dailyPlayed, setDailyPlayed] = useState(false);
+  const [loadingDaily, setLoadingDaily] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -222,6 +225,51 @@ export default function App() {
     }
   };
 
+  const openDaily = async () => {
+    if (!user) {
+      requireAuth(openDaily);
+      return;
+    }
+    setError("");
+    setScreen("daily");
+    setLoadingDaily(true);
+    try {
+      setDailyPlayed(await hasPlayedDailyQuiz(user.id));
+    } catch (e) {
+      setError(e.message || "Dnevni kviz trenutno nije moguće provjeriti.");
+    } finally {
+      setLoadingDaily(false);
+    }
+  };
+
+  const startDaily = async () => {
+    if (!user) {
+      requireAuth(startDaily);
+      return;
+    }
+    setError("");
+    setLoadingQuiz(true);
+    try {
+      const alreadyPlayed = await hasPlayedDailyQuiz(user.id);
+      setDailyPlayed(alreadyPlayed);
+      if (alreadyPlayed) {
+        setScreen("daily");
+        throw new Error("Današnji Dnevni kviz već je odigran. Novi kviz bit će dostupan sutra.");
+      }
+      const questions = await fetchDailyQuizQuestions();
+      setCity(null);
+      setActiveQuizType("daily");
+      setActiveCategory(null);
+      setRound(questions);
+      setResult(null);
+      setScreen("quiz");
+    } catch (e) {
+      setError(e.message || "Dnevni kviz trenutno nije moguće pokrenuti.");
+    } finally {
+      setLoadingQuiz(false);
+    }
+  };
+
   const openLeaderboard = async (type = null) => {
     setError("");
     setScreen("leaderboard");
@@ -317,6 +365,10 @@ export default function App() {
   };
 
   const restartQuiz = () => {
+    if (activeQuizType === "daily") {
+      setScreen("daily");
+      return;
+    }
     if (activeQuizType === "city" && city) {
       startCity(city);
       return;
@@ -330,15 +382,23 @@ export default function App() {
   }, [screen]);
 
   const activeCategoryTitle = categories.find(([id]) => id === activeCategory)?.[1] ?? "Hrvatski kviz";
-  const quizTitle = activeQuizType === "city" ? `Brani svoj grad: ${city?.name ?? ""}` : activeCategoryTitle;
-  const quizSubtitle = activeQuizType === "city" ? "75 pitanja u bazi · 10 pitanja po rundi" : `${mainCount.toLocaleString("hr-HR")} pitanja u glavnoj bazi · 10 pitanja po rundi`;
+  const quizTitle = activeQuizType === "city"
+    ? `Brani svoj grad: ${city?.name ?? ""}`
+    : activeQuizType === "daily"
+      ? "Dnevni kviz"
+      : activeCategoryTitle;
+  const quizSubtitle = activeQuizType === "city"
+    ? "75 pitanja u bazi · 10 pitanja po rundi"
+    : activeQuizType === "daily"
+      ? `10 pomiješanih pitanja · ${getDailyQuizKey()}`
+      : `${mainCount.toLocaleString("hr-HR")} pitanja u glavnoj bazi · 10 pitanja po rundi`;
 
   return <div className="min-h-screen bg-background text-foreground">
     <div className="patria-stripe" />
     <header className="patria-header text-primary-foreground">
       <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-3 sm:px-6">
         <button onClick={home} className="flex shrink-0 items-center gap-3 text-left" aria-label="PatriaSoul početna"><span className="patria-brand-mark flex items-center"><img src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="PatriaSoul" className="h-10 w-auto object-contain" /></span></button>
-        <nav className="patria-nav-scroll ml-auto flex items-center gap-1"><button onClick={home} className="patria-nav-link">⌂ Početna</button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-nav-link"><BookOpen className="h-4 w-4" /> Hrvatski kviz</button><button onClick={openCities} className="patria-nav-link"><MapPin className="h-4 w-4" /> Brani svoj grad</button><button onClick={() => document.getElementById("dnevni-kviz")?.scrollIntoView({ behavior: "smooth" })} className="patria-nav-link">📅 Dnevni kviz</button><button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>{user ? <button onClick={signOut} className="patria-nav-link"><LogOut className="h-4 w-4" /> Moj račun</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Moj račun</button>}</nav>
+        <nav className="patria-nav-scroll ml-auto flex items-center gap-1"><button onClick={home} className="patria-nav-link">⌂ Početna</button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-nav-link"><BookOpen className="h-4 w-4" /> Hrvatski kviz</button><button onClick={openCities} className="patria-nav-link"><MapPin className="h-4 w-4" /> Brani svoj grad</button><button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button><button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>{user ? <button onClick={signOut} className="patria-nav-link"><LogOut className="h-4 w-4" /> Moj račun</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Moj račun</button>}</nav>
       </div>
     </header>
 
@@ -441,7 +501,29 @@ export default function App() {
         {loadingQuiz && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"><div className="rounded-xl bg-card px-6 py-5 shadow-xl"><div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam pitanja...</div></div></div>}
       </section>
 
-      <section className="border-y border-border bg-secondary/40"><div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h2 className="mt-2 text-3xl">Tri načina igranja.</h2><p className="mt-3 max-w-2xl text-muted-foreground">Hrvatski kviz, Brani svoj grad i Dnevni kviz odvojeni su sustavi s vlastitim pravilima i rezultatima.</p></div><ShieldCheck className="h-12 w-12 shrink-0 text-accent" /></div></section>
+      <section id="dnevni-kviz" className="border-y border-border bg-secondary/40">
+  <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+    <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">Dnevni izazov</p>
+        <h2 className="mt-2 text-3xl">10 pomiješanih pitanja svaki dan.</h2>
+        <p className="mt-3 max-w-2xl text-muted-foreground">Svi sudionici na isti dan dobivaju isti skup od 10 pitanja iz glavne baze. Jedan službeni pokušaj vrijedi za taj dan.</p>
+      </div>
+      <button onClick={openDaily} className="patria-button-accent shrink-0">Otvori Dnevni kviz</button>
+    </div>
+  </div>
+</section>
+
+<section className="border-b border-border bg-background">
+  <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-12 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+    <div>
+      <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p>
+      <h2 className="mt-2 text-3xl">Tri načina igranja.</h2>
+      <p className="mt-3 max-w-2xl text-muted-foreground">Hrvatski kviz, Brani svoj grad i Dnevni kviz odvojeni su sustavi s vlastitim pravilima i rezultatima.</p>
+    </div>
+    <ShieldCheck className="h-12 w-12 shrink-0 text-accent" />
+  </div>
+</section>
 
     </main>}
 
@@ -451,9 +533,38 @@ export default function App() {
       {loadingQuiz && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"><div className="rounded-xl bg-card px-6 py-5 shadow-xl"><div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam pitanja...</div></div></div>}
     </main>}
 
-    {screen === "quiz" && <QuizPlayer questions={round} title={quizTitle} subtitle={quizSubtitle} timeLimit={20} onComplete={completeQuiz} onQuit={() => activeQuizType === "city" ? setScreen("cities") : setScreen("home")} />}
+    {screen === "daily" && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="patria-card overflow-hidden">
+        <div className="bg-primary px-6 py-10 text-primary-foreground">
+          <p className="text-sm font-bold uppercase tracking-[.16em] text-red-200">Dnevni kviz</p>
+          <h1 className="mt-2 font-display text-4xl font-bold">Današnji izazov</h1>
+          <p className="mt-3 text-white/75">{getDailyQuizKey()} · 10 pomiješanih pitanja</p>
+        </div>
+        <div className="p-8">
+          {error && <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+          {loadingDaily ? <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Provjeravam današnji pokušaj...</div> : dailyPlayed ? (
+            <div className="text-center">
+              <Trophy className="mx-auto h-10 w-10 text-accent" />
+              <h2 className="mt-4 text-2xl font-bold">Današnji kviz je već odigran.</h2>
+              <p className="mt-2 text-muted-foreground">Za svakog igrača vrijedi jedan službeni pokušaj dnevno. Novi skup pitanja bit će dostupan sutra.</p>
+              <button onClick={() => openLeaderboard("daily")} className="patria-button-accent mt-6">Pogledaj rang-listu</button>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="text-lg font-semibold">Isti skup pitanja vrijedi za sve sudionike danas.</p>
+              <p className="mt-2 text-muted-foreground">Pitanja su deterministički odabrana iz svih aktivnih pitanja glavnog kviza i pomiješana kroz glavne kategorije.</p>
+              <button onClick={startDaily} className="patria-button-accent mt-6">Započni današnji kviz</button>
+            </div>
+          )}
+          <button onClick={home} className="patria-button mt-4 w-full sm:w-auto"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button>
+        </div>
+      </div>
+    </main>}
 
-    {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">{result.saved ? "Rezultat je spremljen." : user ? "Rezultat se obrađuje." : "Rezultat je prikazan."}</p><p className="mt-2 text-muted-foreground">{result.saveError || (user ? "Tvoj rezultat je povezan s tvojim profilom." : "Prijavi se kako bi se rezultat mogao spremiti u tvoj račun.")}</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><button onClick={restartQuiz} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Igraj ponovno</button><button onClick={activeQuizType === "city" ? () => setScreen("cities") : home} className="patria-button">{activeQuizType === "city" ? "Odaberi drugi grad" : "Odaberi kategoriju"}</button><button onClick={() => openLeaderboard(activeQuizType)} className="patria-button">Rang-lista</button></div></div></div></main>}
+    {screen === "quiz" && <QuizPlayer questions={round} title={quizTitle} subtitle={quizSubtitle} timeLimit={20} onComplete={completeQuiz} onQuit={() => activeQuizType === "city" ? setScreen("cities") : activeQuizType === "daily" ? setScreen("daily") : setScreen("home")} />}
+
+    {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">{result.saved ? "Rezultat je spremljen." : user ? "Rezultat se obrađuje." : "Rezultat je prikazan."}</p><p className="mt-2 text-muted-foreground">{result.saveError || (user ? "Tvoj rezultat je povezan s tvojim profilom." : "Prijavi se kako bi se rezultat mogao spremiti u tvoj račun.")}</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">{activeQuizType !== "daily" && <button onClick={restartQuiz} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Igraj ponovno</button>}
+          {activeQuizType === "daily" && <button onClick={() => setScreen("daily")} className="patria-button-accent">Dnevni kviz</button>}<button onClick={activeQuizType === "city" ? () => setScreen("cities") : home} className="patria-button">{activeQuizType === "city" ? "Odaberi drugi grad" : "Odaberi kategoriju"}</button><button onClick={() => openLeaderboard(activeQuizType)} className="patria-button">Rang-lista</button></div></div></div></main>}
 
     {screen === "leaderboard" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h1 className="mt-2 font-display text-4xl font-bold">Rang-lista</h1><p className="mt-2 text-muted-foreground">Rezultati igrača koji su svoje rezultate spremili u PatriaSoul.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
       <div className="mb-6 flex flex-wrap gap-2"><button onClick={() => openLeaderboard(null)} className={leaderboardType === null ? "patria-button-accent" : "patria-button"}>Sve</button><button onClick={() => openLeaderboard("city")} className={leaderboardType === "city" ? "patria-button-accent" : "patria-button"}>Brani svoj grad</button><button onClick={() => openLeaderboard("croatian")} className={leaderboardType === "croatian" ? "patria-button-accent" : "patria-button"}>Hrvatski kviz</button><button onClick={() => openLeaderboard("daily")} className={leaderboardType === "daily" ? "patria-button-accent" : "patria-button"}>Dnevni kviz</button></div>
