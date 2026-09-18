@@ -41,7 +41,7 @@
     @apply bg-background text-foreground font-body;
     min-height: 100vh;
     background-image:
-      linear-gradient(rgba(7, 20, 36, 0.90), rgba(7, 20, 36, 0.90)),
+      linear-gradient(rgba(7, 20, 36, 0.82), rgba(7, 20, 36, 0.82)),
       url("https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/PATRIA_SOUL_ORIGINAL_ISPRAVLJEN_GRB.png"),
       radial-gradient(circle at 15% 10%, rgba(41, 83, 122, 0.18), transparent 32rem),
       radial-gradient(circle at 85% 20%, rgba(143, 34, 45, 0.13), transparent 30rem),
