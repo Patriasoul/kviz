@@ -115,6 +115,53 @@
     transform: translateY(-1px);
   }
 
+
+  .patria-install-bar {
+    border-bottom: 1px solid rgba(213,168,67,.18);
+    background: linear-gradient(90deg, rgba(12,34,55,.98), rgba(18,45,70,.98), rgba(12,34,55,.98));
+  }
+
+  .patria-install-logo {
+    height: 34px;
+    width: 34px;
+    flex: 0 0 34px;
+    object-fit: contain;
+    border-radius: 7px;
+    background: rgba(255,255,255,.06);
+  }
+
+  .patria-install-button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(240,206,115,.72);
+    border-radius: .65rem;
+    padding: .5rem .85rem;
+    background: linear-gradient(135deg, #f6d47e, #c99632);
+    color: #101b29;
+    font-size: .82rem;
+    font-weight: 800;
+    white-space: nowrap;
+    box-shadow: 0 7px 18px rgba(203,151,47,.18);
+  }
+
+  .patria-install-button:hover {
+    filter: brightness(1.07);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(203,151,47,.25);
+  }
+
+  .patria-install-help {
+    border: 1px solid rgba(213,168,67,.35);
+    border-radius: .7rem;
+    padding: .75rem 1rem;
+    background: rgba(18,45,70,.82);
+    color: rgba(255,255,255,.76);
+    font-size: .82rem;
+    line-height: 1.55;
+  }
+
   .patria-header {
     position: sticky;
     top: 0;
