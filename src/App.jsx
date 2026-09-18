@@ -53,7 +53,8 @@ export default function App() {
   const [loadingAccount, setLoadingAccount] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [installHelp, setInstallHelp] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);\n  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -247,7 +248,9 @@ export default function App() {
     setUser(null);
   };
 
-  const closeMobileNav = () => setMobileNavOpen(false);\n\n  const openAccount = async () => {
+  const closeMobileNav = () => setMobileNavOpen(false);
+
+  const openAccount = async () => {
     if (!user) {
       signIn();
       return;
