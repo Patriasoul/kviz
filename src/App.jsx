@@ -835,19 +835,45 @@ export default function App() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[.8fr_1.7fr]">
         <section className="space-y-6">
+          <div className="patria-card overflow-hidden">
+            <div className="relative bg-primary px-6 py-6 text-primary-foreground">
+              <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "linear-gradient(135deg, transparent 0%, transparent 48%, rgba(255,255,255,.8) 49%, transparent 50%, transparent 100%)", backgroundSize: "28px 28px" }} />
+              <div className="relative flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#f1d078]/50 bg-[#f1d078]/10 text-2xl shadow-lg">🛡️</div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-[.16em] text-red-200">Tvoja značka</p>
+                  <h2 className="mt-1 text-xl font-bold text-white">{currentBadge[1]}</h2>
+                  <p className="mt-1 text-sm text-white/70">PatriaSoul razina {playerLevel} · {totalPlayerXp} XP</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>Napredak prema sljedećoj razini</span>
+                <span className="text-accent">{playerLevel >= 100 ? "Maksimalna razina" : "${xpIntoLevel} / 100 XP"}</span>
+              </div>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-secondary">
+                <div className="h-full rounded-full bg-accent transition-all" style={{ width: "${playerLevel >= 100 ? 100 : xpIntoLevel}%" }} />
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">{playerLevel >= 100 ? "Dosegnuo si najvišu PatriaSoul značku — Čuvar nasljeđa." : "Još ${xpToNextLevel} XP do razine ${playerLevel + 1}."}</p>
+              <div className="mt-5 rounded-xl border border-border bg-secondary/40 p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sljedeća značka</p>
+                {nextBadge ? <><p className="mt-1 font-bold">{nextBadge[1]} · razina {nextBadge[0]}</p><p className="mt-1 text-sm text-muted-foreground">Još ${xpToNextBadge} XP do nove značke.</p></> : <><p className="mt-1 font-bold text-accent">🛡️ Čuvar nasljeđa</p><p className="mt-1 text-sm text-muted-foreground">Najviša PatriaSoul značka.</p></>}
+              </div>
+            </div>
+          </div>
+
           <div className="patria-card p-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-primary"><Trophy className="h-5 w-5" /></div>
               <div><h2 className="font-bold">Tvoj napredak</h2><p className="text-sm text-muted-foreground">Pregled načina na koje igraš.</p></div>
             </div>
             <div className="mt-5 space-y-4">
-              <div><div className="mb-1 flex justify-between text-sm"><span>Hrvatski kviz</span><strong>{accountStats.croatian}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(accountStats.croatian * 10, 100)}%` }} /></div></div>
-              <div><div className="mb-1 flex justify-between text-sm"><span>Brani svoj grad</span><strong>{accountStats.city}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(accountStats.city * 10, 100)}%` }} /></div></div>
-              <div><div className="mb-1 flex justify-between text-sm"><span>Dnevni kviz</span><strong>{accountStats.daily}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(accountStats.daily * 10, 100)}%` }} /></div></div>
+              <div><div className="mb-1 flex justify-between text-sm"><span>Hrvatski kviz</span><strong>{accountStats.croatian}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: "${Math.min(accountStats.croatian * 10, 100)}%" }} /></div></div>
+              <div><div className="mb-1 flex justify-between text-sm"><span>Brani svoj grad</span><strong>{accountStats.city}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: "${Math.min(accountStats.city * 10, 100)}%" }} /></div></div>
+              <div><div className="mb-1 flex justify-between text-sm"><span>Dnevni kviz</span><strong>{accountStats.daily}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: "${Math.min(accountStats.daily * 10, 100)}%" }} /></div></div>
             </div>
-          </div>
-
-          <div className="patria-card p-6">
+          </div>          <div className="patria-card p-6">
             <h2 className="font-bold">Brzi pristup</h2>
             <div className="mt-4 grid gap-2">
               <button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-button w-full justify-center">Hrvatski kviz</button>
