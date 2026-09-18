@@ -97,7 +97,7 @@ export default function App() {
     setAuthLoading(true);
     const { error: authError } = await supabase.auth.signInWithOtp({
       email: authEmail.trim(),
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },
     });
     setAuthLoading(false);
     if (authError) {
