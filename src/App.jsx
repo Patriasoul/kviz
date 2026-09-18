@@ -2,10 +2,11 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
-import { fetchCities, fetchCityQuestions, shuffle } from "./lib/cityQuiz";
-import { fetchMainQuizQuestions, getMainQuizCount } from "./lib/mainQuiz";
-import { fetchDailyQuizQuestions, getDailyQuizKey } from "./lib/dailyQuiz";
-import { getLeaderboard, getMyResults, getMyResultStats, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
+import { fetchCities } from "./lib/cityQuiz";
+import { getMainQuizCount } from "./lib/mainQuiz";
+import { getDailyQuizKey } from "./lib/dailyQuiz";
+import { getLeaderboard, getMyResults, getMyResultStats, hasPlayedDailyQuiz } from "./lib/results";
+import { startQuizAttempt, finishQuizAttempt } from "./lib/attempts";
 import { getMyProfile, saveMyNickname } from "./lib/profile";
 import { getMyProgress } from "./lib/progress";
 import { supabase } from "./lib/supabase";
@@ -26,6 +27,7 @@ const categories = [
 export default function App() {
   const [screen, setScreen] = useState("home");
   const [round, setRound] = useState([]);
+  const [attemptId, setAttemptId] = useState(null);
   const [result, setResult] = useState(null);
   const [cities, setCities] = useState([]);
   const [city, setCity] = useState(null);
@@ -443,7 +445,8 @@ export default function App() {
       setCity(null);
       setActiveQuizType("daily");
       setActiveCategory(null);
-      setRound(questions);
+      setAttemptId(attempt.attemptId);
+      setRound(attempt.questions);
       setResult(null);
       setScreen("quiz");
     } catch (e) {
@@ -476,14 +479,12 @@ export default function App() {
     setError("");
     setLoadingQuiz(true);
     try {
-      const questions = await fetchCityQuestions(selectedCity.id);
-      if (questions.length < 10) {
-        throw new Error(`Za ${selectedCity.name} trenutno nije dostupno dovoljno aktivnih pitanja.`);
-      }
+      const attempt = await startQuizAttempt({ quizType: "city", citySlug: selectedCity.slug });
       setCity(selectedCity);
       setActiveQuizType("city");
       setActiveCategory(null);
-      setRound(shuffle(questions).slice(0, 10));
+      setAttemptId(attempt.attemptId);
+      setRound(attempt.questions);
       setResult(null);
       setScreen("quiz");
     } catch (e) {
@@ -501,14 +502,12 @@ export default function App() {
     setError("");
     setLoadingQuiz(true);
     try {
-      const questions = await fetchMainQuizQuestions(category[0]);
-      if (questions.length < 10) {
-        throw new Error(`Kategorija „${category[1]}” trenutno ima samo ${questions.length} aktivnih pitanja. Potrebno je najmanje 10.`);
-      }
+      const attempt = await startQuizAttempt({ quizType: "croatian", category: category[0] });
       setCity(null);
       setActiveQuizType("croatian");
       setActiveCategory(category[0]);
-      setRound(shuffle(questions).slice(0, 10));
+      setAttemptId(attempt.attemptId);
+      setRound(attempt.questions);
       setResult(null);
       setScreen("quiz");
     } catch (e) {
@@ -525,23 +524,21 @@ export default function App() {
     setError("");
     setActiveQuizType(null);
     setActiveCategory(null);
+    setAttemptId(null);
     setCity(null);
   };
 
-  const completeQuiz = async (quizResult) => {
-    setResult({ ...quizResult, saving: Boolean(user) });
+  const completeQuiz = async () => {
+    if (!user || !attemptId) {
+      setResult({ score: 0, total: round.length, timeSeconds: 0, saving: false, saveError: "Pokušaj kviza nije pronađen." });
+      setScreen("result");
+      return;
+    }
+    setResult({ score: 0, total: 10, timeSeconds: 0, saving: true });
     setScreen("result");
-
-    if (!user) return;
-
     try {
-      const saved = await saveQuizResult({
-        quizType: activeQuizType,
-        category: activeQuizType === "croatian" ? activeCategory : null,
-        citySlug: activeQuizType === "city" ? city?.slug : null,
-        ...quizResult,
-      });
-      setResult((current) => ({ ...current, saved: saved.saved, saving: false }));
+      const saved = await finishQuizAttempt(attemptId);
+      setResult({ ...saved, saving: false, saved: true });
     } catch (e) {
       setResult((current) => ({ ...current, saving: false, saveError: e.message }));
     }
