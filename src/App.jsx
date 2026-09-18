@@ -791,7 +791,7 @@ export default function App() {
               <p className="text-xs font-bold uppercase tracking-[.16em] text-red-200">PatriaSoul igrač</p>
               <h2 className="mt-1 truncate text-2xl font-bold sm:text-3xl">{accountDisplayName}</h2>
               <p className="mt-1 truncate text-sm text-white/70">{user?.email || "Prijavljen korisnik"}</p>
-              {accountUsername && <p className="mt-2 text-sm text-white/80">Nadimak: @{accountUsername}</p><button onClick={() => { setNickname(accountUsername); setError(""); setNicknameOpen(true); }} className="mt-2 text-left text-xs font-semibold text-[#f1d078] hover:underline">Promijeni nadimak</button>}
+              {accountUsername && <><p className="mt-2 text-sm text-white/80">Nadimak: @{accountUsername}</p><button onClick={() => { setNickname(accountUsername); setError(""); setNicknameOpen(true); }} className="mt-2 text-left text-xs font-semibold text-[#f1d078] hover:underline">Promijeni nadimak</button></>}
             </div>
             <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-left sm:min-w-[150px]">
               <p className="text-xs uppercase tracking-wider text-white/60">Najbolji rezultat</p>
