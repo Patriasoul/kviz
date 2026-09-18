@@ -80,6 +80,13 @@ export default function App() {
     setAuthOpen(true);
   };
 
+  const getAuthRedirectUrl = () => {
+    const baseUrl = import.meta.env.BASE_URL || "/";
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    if (isLocal) return new URL(baseUrl, window.location.origin).toString();
+    return "https://patriasoul.github.io/kviz/";
+  };
+
   const submitAuth = async () => {
     setError("");
     if (!authRulesAccepted) {
@@ -97,7 +104,7 @@ export default function App() {
     setAuthLoading(true);
     const { error: authError } = await supabase.auth.signInWithOtp({
       email: authEmail.trim(),
-      options: { emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}` },
+      options: { emailRedirectTo: getAuthRedirectUrl() },
     });
     setAuthLoading(false);
     if (authError) {
