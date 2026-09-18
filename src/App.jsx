@@ -240,7 +240,7 @@ export default function App() {
     if (!validateAuth()) return;
     if (authMode === "register") {
       if (!authName.trim() || !authUsername.trim()) {
-        setError("Upiši ime i prezime te korisničko ime.");
+        setError("Upiši ime i prezime te nadimak.");
         return;
       }
       if (authPassword !== authPasswordConfirm) {
@@ -616,8 +616,8 @@ export default function App() {
             <input value={authName} onChange={(e) => setAuthName(e.target.value)} type="text" autoComplete="name" placeholder="Ime i prezime" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
           </label>
           <label className="mt-4 block text-sm font-semibold">
-            Korisničko ime
-            <input value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} type="text" autoComplete="username" placeholder="npr. patriasoul123" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
+            Nadimak za kviz
+            <input value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} type="text" autoComplete="username" placeholder="npr. Hrvat_1991" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 outline-none focus:ring-2 focus:ring-accent" />
           </label>
         </>}
 
@@ -791,7 +791,7 @@ export default function App() {
               <p className="text-xs font-bold uppercase tracking-[.16em] text-red-200">PatriaSoul igrač</p>
               <h2 className="mt-1 truncate text-2xl font-bold sm:text-3xl">{accountDisplayName}</h2>
               <p className="mt-1 truncate text-sm text-white/70">{user?.email || "Prijavljen korisnik"}</p>
-              {accountUsername && <p className="mt-2 text-sm text-white/80">@{accountUsername}</p>}
+              {accountUsername && <p className="mt-2 text-sm text-white/80">Nadimak: @{accountUsername}</p><button onClick={() => { setNickname(accountUsername); setError(""); setNicknameOpen(true); }} className="mt-2 text-left text-xs font-semibold text-[#f1d078] hover:underline">Promijeni nadimak</button>}
             </div>
             <div className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-left sm:min-w-[150px]">
               <p className="text-xs uppercase tracking-wider text-white/60">Najbolji rezultat</p>
