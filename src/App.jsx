@@ -342,8 +342,28 @@ export default function App() {
   };
 
   const signOut = async () => {
-    await supabase?.auth.signOut();
+    setError("");
+    setAuthOpen(false);
+    setNicknameOpen(false);
     setUser(null);
+    setProfile(null);
+    setAccountResults([]);
+    setAccountStatsResults([]);
+    setAccountResultCount(0);
+    setAccountPage(1);
+    setPlayerProgress([]);
+    setScreen("home");
+    setRound([]);
+    setResult(null);
+    setAttemptId(null);
+    setActiveQuizType(null);
+    setActiveCategory(null);
+    setCity(null);
+
+    const { error: signOutError } = await supabase?.auth.signOut() ?? {};
+    if (signOutError) {
+      setError(signOutError.message || "Odjava nije uspjela.");
+    }
   };
 
   const openAccount = async () => {
@@ -609,8 +629,8 @@ export default function App() {
     <div className="patria-portal-bar"><div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-3 sm:px-6"><div className="patria-quiz-title" aria-label="PatriaSoul Kviz - Hrvatska, povijest, znanje, identitet"><span className="patria-quiz-name">PatriaSoul Kviz</span><span className="patria-quiz-separator">-</span><span className="patria-quiz-tagline">Hrvatska · povijest · znanje · identitet</span></div><a href="https://patriasoul.github.io/" className="patria-portal-button" aria-label="Povratak na PatriaSoul portal"><ArrowLeft className="h-5 w-5" /> Povratak na PatriaSoul portal</a></div></div>
     {!isStandalone && <div className="patria-install-bar"><div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3 px-4 py-2.5 sm:px-6"><div className="flex min-w-0 items-center gap-3"><img src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="" className="patria-install-logo" /><div className="min-w-0"><p className="truncate text-sm font-bold text-white">Instaliraj PatriaSoul</p><p className="hidden text-xs text-white/55 sm:block">Pokreni kviz kao aplikaciju na računalu ili telefonu.</p></div></div><button onClick={installPatriaSoul} className="patria-install-button" aria-label="Instaliraj PatriaSoul">Instaliraj</button></div></div>}
     {installHelp && !isStandalone && <div className="mx-auto max-w-[1400px] px-4 pt-3 sm:px-6"><div className="patria-install-help"><strong>Instalacija nije dostupna automatski u ovom pregledniku.</strong> Na računalu potraži opciju <b>Instaliraj PatriaSoul</b> u izborniku preglednika. Na iPhoneu/iPadu odaberi <b>Dijeli → Dodaj na početni zaslon</b>.</div></div>}
-    {authOpen && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4" onClick={() => !authLoading && setAuthOpen(false)}>
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    {authOpen && <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/60 px-4 py-4 sm:items-center sm:py-8" onClick={() => !authLoading && setAuthOpen(false)}>
+      <div className="my-auto max-h-[calc(100vh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl sm:max-h-[calc(100vh-4rem)]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5">
           <p className="text-xs font-bold uppercase tracking-[.18em] text-accent">PatriaSoul račun</p>
           <h2 className="mt-2 font-display text-3xl font-bold">{authMode === "login" ? "Prijava" : "Registracija"}</h2>
