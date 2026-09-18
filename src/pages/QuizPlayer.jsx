@@ -16,6 +16,12 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
   const q = questions[index];
   const progress = questions.length ? ((index + 1) / questions.length) * 100 : 0;
 
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabledState(next);
+    setSoundEnabled(next);
+  };
+
   useEffect(() => {
     if (questions.length) playStart();
   }, [questions.length]);
@@ -56,7 +62,13 @@ export default function QuizPlayer({ questions, title, subtitle, timeLimit = 20,
     if (answered || !q) return;
     setSelected(i);
     setAnswered(true);
-    if (i === q.correctIndex) scoreRef.current += 1;
+    playSelect();
+    if (i === q.correctIndex) {
+      scoreRef.current += 1;
+      playCorrect();
+    } else {
+      playWrong();
+    }
   };
 
   if (!q) {
