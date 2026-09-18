@@ -20,13 +20,39 @@ export async function saveQuizResult({ quizType, cityId = null, citySlug = null,
   return { saved: true };
 }
 
-export async function getMyResults(limit = 20) {
+export async function getMyResults(page = 1, pageSize = 20) {
+  if (!supabase) return { data: [], count: 0 };
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { data: [], count: 0 };
+
+  const safePage = Math.max(1, Number(page) || 1);
+  const safePageSize = Math.max(1, Math.min(100, Number(pageSize) || 20));
+  const from = (safePage - 1) * safePageSize;
+  const to = from + safePageSize - 1;
+
+  const { data, count, error } = await supabase
+    .from("quiz_results")
+    .select("id,quiz_type,category,city_slug,score,total,percentage,time_seconds,created_at", { count: "exact" })
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) throw error;
+  return { data: data ?? [], count: count ?? 0 };
+}
+
+export async function getMyResultStats() {
   if (!supabase) return [];
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("quiz_results")
-    .select("id,quiz_type,category,city_slug,score,total,percentage,time_seconds,created_at")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+    .select("quiz_type,score,total,percentage")
+    .eq("user_id", user.id);
+
   if (error) throw error;
   return data ?? [];
 }
