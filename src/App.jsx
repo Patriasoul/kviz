@@ -658,6 +658,23 @@ export default function App() {
       </div>
     </div>}
 
+    {nicknameOpen && user && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/70 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+        <p className="text-xs font-bold uppercase tracking-[.18em] text-accent">PatriaSoul igrač</p>
+        <h2 className="mt-2 font-display text-3xl font-bold">Odaberi svoj nadimak</h2>
+        <p className="mt-2 text-sm text-muted-foreground">E-mail ostaje samo za prijavu. Na kvizu i rang-listi prikazivat ćemo samo tvoj nadimak.</p>
+        <label className="mt-5 block text-sm font-semibold">
+          Nadimak
+          <input value={nickname} onChange={(e) => setNickname(e.target.value)} maxLength={24} autoFocus placeholder="npr. Hrvat_1991" className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-3 outline-none focus:ring-2 focus:ring-accent" />
+        </label>
+        <p className="mt-2 text-xs text-muted-foreground">3–24 znaka. Nadimak mora biti jedinstven.</p>
+        {error && <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+        <button disabled={savingNickname} onClick={submitNickname} className="patria-button-accent mt-5 w-full">
+          {savingNickname ? "Spremam..." : "Spremi nadimak"}
+        </button>
+      </div>
+    </div>}
+
     {screen === "rules" && <Pravilnik onBack={() => setScreen("home")} />}
 
     {screen === "home" && <main>
