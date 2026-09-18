@@ -83,6 +83,38 @@
     );
   }
 
+
+  .patria-portal-bar {
+    position: relative;
+    z-index: 35;
+    border-bottom: 1px solid rgba(213,168,67,.28);
+    background: linear-gradient(90deg, rgba(6,19,33,.98), rgba(12,34,55,.98), rgba(6,19,33,.98));
+  }
+
+  .patria-portal-button {
+    display: inline-flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    border: 1px solid rgba(240,206,115,.72);
+    border-radius: .7rem;
+    padding: .65rem 1rem;
+    background: linear-gradient(135deg, rgba(246,212,126,.16), rgba(201,150,50,.12));
+    color: #f6d47e;
+    font-size: .9rem;
+    font-weight: 800;
+    box-shadow: 0 7px 20px rgba(0,0,0,.16);
+    white-space: nowrap;
+  }
+
+  .patria-portal-button:hover {
+    background: linear-gradient(135deg, rgba(246,212,126,.24), rgba(201,150,50,.18));
+    border-color: #f6d47e;
+    color: #fff;
+    transform: translateY(-1px);
+  }
+
   .patria-header {
     position: sticky;
     top: 0;
