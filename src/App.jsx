@@ -5,7 +5,7 @@ import QuizPlayer from "./pages/QuizPlayer";
 import { fetchCities, fetchCityQuestions, shuffle } from "./lib/cityQuiz";
 import { fetchMainQuizQuestions, getMainQuizCount } from "./lib/mainQuiz";
 import { fetchDailyQuizQuestions, getDailyQuizKey } from "./lib/dailyQuiz";
-import { getLeaderboard, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
+import { getLeaderboard, getMyResults, hasPlayedDailyQuiz, saveQuizResult } from "./lib/results";
 import { supabase } from "./lib/supabase";
 
 const categories = [
@@ -48,7 +48,7 @@ export default function App() {
   const [authRulesAccepted, setAuthRulesAccepted] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [dailyPlayed, setDailyPlayed] = useState(false);
-  const [loadingDaily, setLoadingDaily] = useState(false);
+  const [loadingDaily, setLoadingDaily] = useState(false);\n  const [accountResults, setAccountResults] = useState([]);\n  const [loadingAccount, setLoadingAccount] = useState(false);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -398,7 +398,7 @@ export default function App() {
     <header className="patria-header text-primary-foreground">
       <div className="mx-auto flex max-w-[1400px] items-center gap-4 px-4 py-3 sm:px-6">
         <button onClick={home} className="flex shrink-0 items-center gap-3 text-left" aria-label="PatriaSoul početna"><span className="patria-brand-mark flex items-center"><img src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="PatriaSoul" className="h-10 w-auto object-contain" /></span></button>
-        <nav className="patria-nav-scroll ml-auto flex items-center gap-1"><button onClick={home} className="patria-nav-link">⌂ Početna</button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-nav-link"><BookOpen className="h-4 w-4" /> Hrvatski kviz</button><button onClick={openCities} className="patria-nav-link"><MapPin className="h-4 w-4" /> Brani svoj grad</button><button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button><button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>{user ? <button onClick={signOut} className="patria-nav-link"><LogOut className="h-4 w-4" /> Moj račun</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Moj račun</button>}</nav>
+        <nav className="patria-nav-scroll ml-auto flex items-center gap-1"><button onClick={home} className="patria-nav-link">⌂ Početna</button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-nav-link"><BookOpen className="h-4 w-4" /> Hrvatski kviz</button><button onClick={openCities} className="patria-nav-link"><MapPin className="h-4 w-4" /> Brani svoj grad</button><button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button><button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>{user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> Moj račun</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Moj račun</button>}</nav>
       </div>
     </header>
 
@@ -566,6 +566,57 @@ export default function App() {
     {screen === "result" && result && <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20"><div className="patria-card overflow-hidden text-center"><div className="bg-primary px-6 py-10 text-primary-foreground"><Trophy className="mx-auto h-12 w-12 text-red-300" /><p className="mt-4 text-sm font-bold uppercase tracking-[.16em] text-red-200">Rezultat</p><h1 className="mt-2 font-display text-5xl font-bold">{result.score} / {result.total}</h1><p className="mt-2 opacity-75">Vrijeme: {result.timeSeconds} s</p></div><div className="p-8"><p className="text-lg font-semibold">{result.saved ? "Rezultat je spremljen." : user ? "Rezultat se obrađuje." : "Rezultat je prikazan."}</p><p className="mt-2 text-muted-foreground">{result.saveError || (user ? "Tvoj rezultat je povezan s tvojim profilom." : "Prijavi se kako bi se rezultat mogao spremiti u tvoj račun.")}</p><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">{activeQuizType !== "daily" && <button onClick={restartQuiz} className="patria-button-accent"><RotateCcw className="mr-2 h-4 w-4" /> Igraj ponovno</button>}
           {activeQuizType === "daily" && <button onClick={() => setScreen("daily")} className="patria-button-accent">Dnevni kviz</button>}<button onClick={activeQuizType === "city" ? () => setScreen("cities") : home} className="patria-button">{activeQuizType === "city" ? "Odaberi drugi grad" : "Odaberi kategoriju"}</button><button onClick={() => openLeaderboard(activeQuizType)} className="patria-button">Rang-lista</button></div></div></div></main>}
 
+    {screen === "account" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul račun</p>
+          <h1 className="mt-2 font-display text-4xl font-bold">Moj račun</h1>
+          <p className="mt-2 text-muted-foreground">Tvoj profil i spremljeni rezultati igranja.</p>
+        </div>
+        <button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button>
+      </div>
+
+      {error && <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+
+      <div className="grid gap-6 lg:grid-cols-[.9fr_1.6fr]">
+        <section className="patria-card p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground"><UserRound className="h-7 w-7" /></div>
+            <div className="min-w-0">
+              <h2 className="truncate text-xl font-bold">{user?.user_metadata?.full_name || user?.user_metadata?.username || "PatriaSoul igrač"}</h2>
+              <p className="truncate text-sm text-muted-foreground">{user?.email || "Prijavljen korisnik"}</p>
+            </div>
+          </div>
+          {user?.user_metadata?.username && <div className="mt-5 rounded-lg bg-secondary/50 p-3 text-sm"><span className="text-muted-foreground">Korisničko ime:</span> <strong>{user.user_metadata.username}</strong></div>}
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-border p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Odigrano</p><p className="mt-1 text-2xl font-bold">{accountResults.length}</p></div>
+            <div className="rounded-lg border border-border p-4"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Dnevni</p><p className="mt-1 text-2xl font-bold">{accountResults.filter((r) => r.quiz_type === "daily").length}</p></div>
+          </div>
+          <button onClick={signOut} className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border px-4 py-3 font-semibold transition hover:bg-secondary"><LogOut className="h-4 w-4" /> Odjavi se</button>
+        </section>
+
+        <section className="patria-card overflow-hidden">
+          <div className="border-b border-border bg-secondary/40 px-6 py-5">
+            <h2 className="text-xl font-bold">Moji rezultati</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Posljednjih 20 spremljenih rezultata.</p>
+          </div>
+          {loadingAccount ? <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam rezultate...</div> : accountResults.length === 0 ? (
+            <div className="p-10 text-center"><Trophy className="mx-auto h-10 w-10 text-accent" /><h3 className="mt-4 text-xl font-bold">Još nema spremljenih rezultata</h3><p className="mt-2 text-sm text-muted-foreground">Odigraj kviz i tvoj rezultat će se pojaviti ovdje.</p></div>
+          ) : (
+            <div className="divide-y divide-border">
+              {accountResults.map((r) => {
+                const typeLabel = r.quiz_type === "daily" ? "Dnevni kviz" : r.quiz_type === "city" ? `Brani svoj grad${r.city_slug ? `: ${r.city_slug}` : ""}` : r.category ? `Hrvatski kviz · ${r.category}` : "Hrvatski kviz";
+                return <div key={r.id} className="flex items-center justify-between gap-4 px-6 py-4">
+                  <div className="min-w-0"><p className="truncate font-semibold">{typeLabel}</p><p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString("hr-HR")}</p></div>
+                  <div className="shrink-0 text-right"><p className="font-bold text-accent">{r.score} / {r.total}</p><p className="text-xs text-muted-foreground">{Number(r.percentage ?? ((r.score / Math.max(r.total, 1)) * 100)).toFixed(0)}%</p></div>
+                </div>;
+              })}
+            </div>
+          )}
+        </section>
+      </div>
+    </main>}
+
     {screen === "leaderboard" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h1 className="mt-2 font-display text-4xl font-bold">Rang-lista</h1><p className="mt-2 text-muted-foreground">Rezultati igrača koji su svoje rezultate spremili u PatriaSoul.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
       <div className="mb-6 flex flex-wrap gap-2"><button onClick={() => openLeaderboard(null)} className={leaderboardType === null ? "patria-button-accent" : "patria-button"}>Sve</button><button onClick={() => openLeaderboard("city")} className={leaderboardType === "city" ? "patria-button-accent" : "patria-button"}>Brani svoj grad</button><button onClick={() => openLeaderboard("croatian")} className={leaderboardType === "croatian" ? "patria-button-accent" : "patria-button"}>Hrvatski kviz</button><button onClick={() => openLeaderboard("daily")} className={leaderboardType === "daily" ? "patria-button-accent" : "patria-button"}>Dnevni kviz</button></div>
       {error && <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
@@ -581,6 +632,6 @@ export default function App() {
 <a href="https://www.tiktok.com/@hajdi331?lang=hr" target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/15">
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M16.6 3c.3 1.8 1.3 3.1 3.4 3.5v3.1c-1.5-.1-2.8-.6-4-1.5v6.4c0 4.1-2.8 6.5-6.3 6.5-3.3 0-5.7-2.2-5.7-5.3 0-3.4 2.7-5.7 6.3-5.7.3 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.5 0-2.9.9-2.9 2.5 0 1.4 1 2.4 2.4 2.4 1.8 0 2.8-1.3 2.8-3.6V3h4z"/></svg>
   Prati vjerski kanal na TikToku
-</a><div className="mt-5 grid gap-2 text-sm text-white/70"><button onClick={() => setScreen("rules")} className="text-left hover:text-white">Pravilnik o igranju</button><a href="/kviz/terms.html" className="text-left hover:text-white">Pravila korištenja</a><a href="/kviz/privacy.html" className="text-left hover:text-white">Politika privatnosti</a><button onClick={signIn} className="text-left hover:text-white">{user ? "Moj račun" : "Prijava"}</button></div><p className="mt-5 font-display text-lg italic text-white/75">„Znanje čuva ono što pamtimo.”</p></div></div><div className="patria-divider mt-9" /><div className="flex flex-col gap-2 pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between"><span>© 2026 PatriaSoul. Sva prava pridržana.</span><span>Hrvatska · Povijest · Znanje · Identitet</span></div></div></footer>
+</a><div className="mt-5 grid gap-2 text-sm text-white/70"><button onClick={() => setScreen("rules")} className="text-left hover:text-white">Pravilnik o igranju</button><a href="/kviz/terms.html" className="text-left hover:text-white">Pravila korištenja</a><a href="/kviz/privacy.html" className="text-left hover:text-white">Politika privatnosti</a><button onClick={openAccount} className="text-left hover:text-white">{user ? "Moj račun" : "Prijava"}</button></div><p className="mt-5 font-display text-lg italic text-white/75">„Znanje čuva ono što pamtimo.”</p></div></div><div className="patria-divider mt-9" /><div className="flex flex-col gap-2 pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between"><span>© 2026 PatriaSoul. Sva prava pridržana.</span><span>Hrvatska · Povijest · Znanje · Identitet</span></div></div></footer>
   </div>;
 }
