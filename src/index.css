@@ -222,7 +222,7 @@
     transition: transform .2s ease;
   }
 
-  .patria-nav-link:hover::after { transform: scaleX(1); }
+  .patria-nav-link:hover::after { transform: scaleX(1); }\n\n  .patria-mobile-menu-button,\n  .patria-mobile-nav { display: none; }
 
   .patria-hero {
     position: relative;
@@ -416,11 +416,49 @@
 }
 
 @media (max-width: 900px) {
-  .patria-nav-scroll {
-    overflow-x: auto;
-    scrollbar-width: none;
+  .patria-nav-desktop { display: none; }
+
+  .patria-mobile-menu-button {
+    display: inline-flex;
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 46px;
+    border: 1px solid rgba(240,206,115,.55);
+    border-radius: .7rem;
+    background: rgba(255,255,255,.055);
+    color: #f6d47e;
   }
-  .patria-nav-scroll::-webkit-scrollbar { display: none; }
+
+  .patria-mobile-nav {
+    display: grid;
+    gap: .35rem;
+    padding: .5rem 1rem 1rem;
+    border-top: 1px solid rgba(213,168,67,.18);
+    background: linear-gradient(180deg, rgba(6,19,33,.99), rgba(8,24,43,.99));
+  }
+
+  .patria-mobile-nav-link {
+    display: flex;
+    min-height: 50px;
+    align-items: center;
+    gap: .75rem;
+    width: 100%;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: .7rem;
+    padding: .7rem .85rem;
+    background: rgba(255,255,255,.035);
+    color: rgba(255,255,255,.9);
+    font-size: .95rem;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .patria-mobile-nav-link:active {
+    border-color: rgba(240,206,115,.45);
+    background: rgba(240,206,115,.08);
+  }
 }
 
 @media (max-width: 640px) {
