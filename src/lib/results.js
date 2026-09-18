@@ -6,14 +6,13 @@ export async function saveQuizResult({ quizType, cityId = null, citySlug = null,
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { saved: false, reason: "Korisnik nije prijavljen." };
 
-  const { error } = await supabase.from("quiz_results").insert({
-    user_id: user.id,
-    quiz_type: quizType,
-    category,
-    city_slug: citySlug ?? cityId,
-    score,
-    total,
-    time_seconds: timeSeconds,
+  const { error } = await supabase.rpc("record_quiz_result", {
+    p_quiz_type: quizType,
+    p_category: category,
+    p_city_slug: citySlug ?? cityId,
+    p_score: Number(score),
+    p_total: Number(total),
+    p_time_seconds: timeSeconds == null ? null : Number(timeSeconds),
   });
 
   if (error) throw error;
