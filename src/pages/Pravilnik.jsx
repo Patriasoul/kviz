@@ -17,7 +17,7 @@ const sections = [
     paragraphs: [
       "Hrvatski kviz sastoji se od baze od 2000 pitanja.",
       "Pitanja su raspoređena u deset kategorija: Hrvatsko opće znanje; Povijest Hrvatske; Domovinski rat; Geografija Hrvatske; Priroda Hrvatske; Kultura i baština; Glagoljica; Vjera i sakralna baština; Sport; Znanost i izumi.",
-      "Korisnik prije početka može odabrati željenu kategoriju ili igrati kombinirani kviz.",
+      "Korisnik prije početka odabire jednu od dostupnih kategorija. Svaka runda sadrži 10 pitanja.",
     ],
   },
   {
