@@ -91,6 +91,42 @@
     background: linear-gradient(90deg, rgba(6,19,33,.98), rgba(12,34,55,.98), rgba(6,19,33,.98));
   }
 
+  .patria-quiz-title {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: .55rem;
+    min-width: 0;
+    font-family: var(--font-heading);
+    line-height: 1.1;
+    letter-spacing: .01em;
+  }
+
+  .patria-quiz-name {
+    font-size: 1.28rem;
+    font-weight: 800;
+    letter-spacing: .01em;
+    background: linear-gradient(90deg, #fff 5%, #f7d982 52%, #fff 95%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 3px 18px rgba(213,168,67,.16);
+  }
+
+  .patria-quiz-separator {
+    color: rgba(246,212,126,.65);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .patria-quiz-tagline {
+    color: rgba(255,255,255,.72);
+    font-family: var(--font-body);
+    font-size: .88rem;
+    font-weight: 600;
+    letter-spacing: .045em;
+  }
+
   .patria-portal-button {
     display: inline-flex;
     min-height: 46px;
