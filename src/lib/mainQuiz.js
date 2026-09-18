@@ -13,7 +13,7 @@ export async function fetchMainQuizQuestions(category = null) {
 
   let query = supabase
     .from("quiz_questions_public")
-    .select("id,category,question,answer_a,answer_b,answer_c,answer_d,correct_index,source_url")
+    .select("id,category,question,answer_a,answer_b,answer_c,answer_d,source_url")
     .eq("active", true);
 
   if (category) query = query.eq("category", resolveCategory(category));
@@ -26,7 +26,6 @@ export async function fetchMainQuizQuestions(category = null) {
     category: row.category,
     question: row.question,
     answers: [row.answer_a, row.answer_b, row.answer_c, row.answer_d],
-    correctIndex: row.correct_index,
     sourceUrl: row.source_url,
   }));
 }
