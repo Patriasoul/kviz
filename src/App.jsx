@@ -115,12 +115,18 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return undefined;
 
-    const loadProfile = async (currentUser) => {
+    const loadProfile = async (currentUser, authEvent = null) => {
       setUser(currentUser ?? null);
       if (!currentUser) {
         setProfile(null);
         setNicknameOpen(false);
         return;
+      }
+
+      if (authEvent === "SIGNED_IN") {
+        setAuthOpen(false);
+        setScreen("account");
+        setAccountPage(1);
       }
 
       try {
@@ -136,8 +142,8 @@ export default function App() {
     };
 
     supabase.auth.getUser().then(({ data }) => loadProfile(data.user ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      loadProfile(session?.user ?? null);
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      loadProfile(session?.user ?? null, event);
     });
     return () => listener.subscription.unsubscribe();
   }, []);
