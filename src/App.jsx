@@ -576,7 +576,7 @@ export default function App() {
       ? `10 pomiješanih pitanja · ${getDailyQuizKey()}`
       : `${mainCount.toLocaleString("hr-HR")} pitanja u glavnoj bazi · 10 pitanja po rundi`;
 
-  return <div className="min-h-screen bg-background text-foreground">
+  return <div className="min-h-screen text-foreground">
     <div className="patria-stripe" />
     <header className="patria-header text-primary-foreground">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 py-2.5 sm:px-6">
