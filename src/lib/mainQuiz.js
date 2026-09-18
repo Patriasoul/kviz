@@ -12,7 +12,7 @@ export async function fetchMainQuizQuestions(category = null) {
   if (!supabase) throw new Error("Supabase nije konfiguriran.");
 
   let query = supabase
-    .from("quiz_questions")
+    .from("quiz_questions_public")
     .select("id,category,question,answer_a,answer_b,answer_c,answer_d,correct_index,source_url")
     .eq("active", true);
 
