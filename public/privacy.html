@@ -1,40 +1,98 @@
 <!doctype html>
 <html lang="hr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071426">
+<meta name="description" content="Politika privatnosti PatriaSoul kviza.">
 <title>Politika privatnosti — PatriaSoul</title>
 <style>
-:root{color-scheme:dark;--card:#151b23;--text:#f3f4f6;--muted:#a9b1bd}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(135deg,#10151d,#0b0e13);color:var(--text);line-height:1.7}
-header{border-bottom:1px solid #29313d;background:#11161d;padding:18px 24px}header a{color:white;text-decoration:none;font-weight:800}
-main{max-width:900px;margin:0 auto;padding:48px 20px 70px}.card{background:var(--card);border:1px solid #2b3440;border-radius:18px;padding:30px}h1{font-size:clamp(2rem,5vw,3.4rem);margin:.2em 0}h2{margin-top:2em;color:#f1d078}p,li{color:#d0d6de}a{color:#f1d078}small{color:var(--muted)}
-.btn{display:inline-block;margin-bottom:20px;padding:9px 14px;border:1px solid #394453;border-radius:9px;color:white;text-decoration:none}
+:root{color-scheme:dark;--bg:#061321;--card:#0f2235;--text:#f5f7fa;--muted:#b6c1cd;--gold:#f1d078;--red:#b51f35;--blue:#193452;--line:rgba(255,255,255,.10)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% -10%,rgba(35,78,116,.38),transparent 38rem),linear-gradient(135deg,var(--bg),#040c15);color:var(--text);line-height:1.75}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.035;background:repeating-linear-gradient(45deg,#fff 0 1px,transparent 1px 14px)}
+.topline{height:4px;background:linear-gradient(90deg,var(--red) 0 33.333%,#f7f7f7 33.333% 66.666%,var(--blue) 66.666% 100%)}
+header{position:sticky;top:0;z-index:10;border-bottom:1px solid rgba(241,208,120,.20);background:rgba(6,19,33,.92);backdrop-filter:blur(12px)}
+.header-inner{max-width:1100px;margin:auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:inline-flex;align-items:center}.logo{height:54px;width:auto;max-width:190px;object-fit:contain}
+.back{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:9px 13px;color:#fff;text-decoration:none;font-weight:700;background:rgba(255,255,255,.045)}
+.back:hover{border-color:rgba(241,208,120,.45);color:var(--gold)}
+main{max-width:960px;margin:auto;padding:42px 20px 72px}
+.hero{position:relative;overflow:hidden;border:1px solid rgba(241,208,120,.20);border-radius:22px 22px 0 0;padding:34px 30px;background:linear-gradient(135deg,rgba(25,52,82,.94),rgba(9,25,41,.98))}
+.hero:after{content:"";position:absolute;right:-90px;top:-120px;width:300px;height:300px;border-radius:50%;background:rgba(241,208,120,.07)}
+.kicker{position:relative;z-index:1;color:#f1d078;font-size:.72rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+h1{position:relative;z-index:1;margin:7px 0 0;font-size:clamp(2rem,5vw,3.4rem);line-height:1.1}
+.subtitle{position:relative;z-index:1;margin:12px 0 0;color:rgba(255,255,255,.72)}
+.card{border:1px solid var(--line);border-top:0;border-radius:0 0 22px 22px;background:rgba(15,34,53,.96);padding:30px}
+h2{margin:2rem 0 .6rem;color:var(--gold);font-size:1.25rem}h2:first-child{margin-top:0}
+p,li{color:#d2dae3}a{color:var(--gold)}ul{padding-left:1.3rem}
+.meta{font-size:.78rem;color:#8f9cab;margin:0 0 20px}
+.callout{margin-top:28px;padding:16px 18px;border:1px solid rgba(241,208,120,.18);border-radius:12px;background:rgba(241,208,120,.045);color:#dbe2e9}
+.footer{max-width:960px;margin:auto;padding:0 20px 34px;color:#718092;font-size:.78rem;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:640px){.header-inner{padding:10px 14px}.logo{height:46px}.back{font-size:.8rem}main{padding:28px 14px 55px}.hero{padding:28px 22px}.card{padding:24px 20px}}
 </style>
 </head>
-<body><header><a href="./">🇭🇷 PatriaSoul</a></header>
-<main><div class="card">
-<a class="btn" href="./">← Natrag na kviz</a>
-<p><small>Politika privatnosti · ažurirano 18. rujna 2026.</small></p>
+<body>
+<div class="topline"></div>
+<header><div class="header-inner">
+<a class="brand" href="./" aria-label="PatriaSoul početna"><img class="logo" src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="PatriaSoul"></a>
+<a class="back" href="./">← Natrag na kviz</a>
+</div></header>
+<main>
+<section class="hero">
+<div class="kicker">PatriaSoul · Privatnost · Sigurnost</div>
 <h1>Politika privatnosti</h1>
-<p>Ova politika objašnjava koje se vrste podataka mogu obrađivati pri korištenju PatriaSoul kviza i u koje se svrhe koriste.</p>
-<h2>1. Podaci korisničkog računa</h2>
-<p>Pri registraciji putem e-maila korisnik odabire nadimak i unosi e-mail adresu. Nadimak služi kao javno ime igrača, dok se e-mail koristi za prijavu i upravljanje računom. Pri prijavi putem Googlea ili TikToka podatke povezane s prijavom obrađuje i odgovarajući pružatelj identiteta, a PatriaSoul prima podatke koje pružatelj i postavke autorizacije dopuštaju.</p>
-<h2>2. Nadimak i zaštita e-mail adrese</h2>
-<p>Radi diskrecije korisnika, PatriaSoul koristi nadimak koji igrač sam odabire za prikaz u kvizu, na profilu i na rang-listi. Nadimak mora biti jedinstven među korisnicima i može sadržavati između 3 i 24 znaka.</p>
-<p>E-mail adresa služi za prijavu i upravljanje korisničkim računom. E-mail adresa korisnika nije javno prikazana na rang-listi niti se koristi kao javno ime igrača. Na javnim prikazima rezultata koristi se nadimak.</p>
-<p>Korisnik može promijeniti svoj nadimak u svom PatriaSoul računu, pod uvjetom da novi nadimak nije već zauzet.</p>
-<h2>3. Rezultati kviza</h2>
-<p>Rezultati mogu sadržavati vrstu kviza, kategoriju ili grad, ostvareni rezultat, ukupan broj pitanja, postotak i vrijeme igranja. Ti se podaci koriste za spremanje rezultata i funkcionalnost rang-liste.</p>
-<h2>4. Tehnički podaci i sigurnost</h2>
-<p>PatriaSoul koristi GitHub Pages za objavu aplikacije te Supabase za autentikaciju i podatke aplikacije. Ti pružatelji mogu obrađivati tehničke podatke potrebne za rad, sigurnost i pružanje svojih usluga. GitHub navodi da GitHub Pages pri posjetu bilježi IP adresu radi sigurnosti.</p>
-<h2>5. Google i TikTok prijava</h2>
-<p>Ako korisnik odabere prijavu putem Googlea ili TikToka, komunikacija se odvija s tim pružateljem prema njegovim pravilima privatnosti i uvjetima korištenja. PatriaSoul ne traži niti pohranjuje lozinku Googlea ili TikToka.</p>
-<h2>6. Korištenje podataka</h2>
-<ul><li>omogućavanje prijave i upravljanje korisničkim računom;</li><li>spremanje i prikaz rezultata kviza;</li><li>rad rang-liste i osnovnih funkcija aplikacije;</li><li>sigurnost, otkrivanje zlouporabe i tehničko održavanje.</li></ul>
-<h2>7. Dijeljenje podataka</h2>
-<p>Podaci se ne prodaju. Podaci se mogu obrađivati putem pružatelja infrastrukture i autentikacije koji su potrebni za rad aplikacije.</p>
-<h2>8. Prava korisnika</h2>
-<p>Za pitanja ili zahtjeve vezane uz osobne podatke korisnik može koristiti kontakt kanal naveden na službenoj PatriaSoul stranici. Ovisno o okolnostima, korisnik može imati prava na pristup, ispravak, brisanje, ograničenje obrade ili druga prava prema primjenjivim propisima.</p>
-<h2>9. Izmjene politike</h2>
-<p>Ova politika može biti ažurirana kada se promijene funkcije aplikacije ili način obrade podataka. Nova verzija objavljuje se na ovoj stranici.</p>
-</div></main></body></html>
+<p class="subtitle">Kako PatriaSoul obrađuje podatke potrebne za rad računa, kvizova i rang-liste.</p>
+</section>
+<article class="card">
+<p class="meta">Zadnje ažuriranje: 18. rujna 2026.</p>
+<h2>1. Opće</h2>
+<p>Ova Politika privatnosti objašnjava koje vrste podataka mogu biti obrađene pri korištenju PatriaSoul kviza, zašto su potrebne i kako se koriste u funkcijama aplikacije.</p>
+
+<h2>2. Podaci korisničkog računa</h2>
+<p>Pri korištenju korisničkog računa PatriaSoul može obrađivati podatke potrebne za prijavu i upravljanje računom, primjerice e-mail adresu te podatke profila koje pružatelj prijave dostavi i koje aplikacija koristi.</p>
+<p>PatriaSoul trenutno koristi prijavu putem Googlea. PatriaSoul ne traži niti pohranjuje Googleovu lozinku. Autentikacija se odvija putem Googlea i Supabase Auth sustava.</p>
+
+<h2>3. Nadimak i javni prikaz</h2>
+<p>Korisnik može odabrati jedinstveni nadimak duljine 3–24 znaka. Nadimak se koristi kao javno ime igrača u aplikaciji i na rang-listi.</p>
+<p>E-mail adresa nije javno prikazana na rang-listi niti služi kao javno ime igrača.</p>
+
+<h2>4. Rezultati kviza</h2>
+<p>Za korisnika koji igra prijavljen, aplikacija može spremiti podatke potrebne za rezultat, uključujući vrstu kviza, kategoriju ili grad, broj točnih odgovora, ukupan broj pitanja, postotak uspješnosti, vrijeme igranja i datum rezultata.</p>
+<p>Ti podaci služe radu korisničkog profila, rang-liste, statistike i funkcija napretka.</p>
+
+<h2>5. XP, napredak i značke</h2>
+<p>Aplikacija može obrađivati podatke o ostvarenim rezultatima i dodijeljenom XP-u kako bi prikazala razinu igrača, značke i napredak.</p>
+
+<h2>6. Tehnički podaci i sigurnost</h2>
+<p>PatriaSoul je objavljen putem GitHub Pagesa, a podatke aplikacije i autentikaciju koristi putem Supabase infrastrukture. Ovi pružatelji mogu obrađivati tehničke podatke potrebne za pružanje, sigurnost i održavanje svojih usluga u skladu sa svojim pravilima i politikama.</p>
+<p>PatriaSoul koristi sigurnosne mehanizme aplikacije i poslužiteljske provjere kako bi zaštitio rezultate, korisničke račune i funkcije kviza od zlouporabe.</p>
+
+<h2>7. Za što se podaci koriste</h2>
+<ul>
+<li>omogućavanje prijave i upravljanje korisničkim računom;</li>
+<li>spremanje i prikaz rezultata kviza;</li>
+<li>rad rang-liste i statistike;</li>
+<li>prikaz XP-a, razine i znački;</li>
+<li>sigurnost, otkrivanje zlouporabe i tehničko održavanje aplikacije.</li>
+</ul>
+
+<h2>8. Dijeljenje i javni podaci</h2>
+<p>PatriaSoul ne prodaje korisničke podatke. Podaci se mogu obrađivati putem pružatelja infrastrukture i autentikacije koji su potrebni za rad aplikacije.</p>
+<p>Na javnim prikazima koristi se nadimak i podaci o rezultatu potrebni za funkciju rang-liste. E-mail adresa nije namijenjena javnom prikazu.</p>
+
+<h2>9. Brisanje, ispravak i zahtjevi korisnika</h2>
+<p>Za pitanja ili zahtjeve vezane uz osobne podatke, ispravak podataka ili brisanje računa korisnik može koristiti službeni kontakt kanal PatriaSoul projekta. Zahtjevi se obrađuju u skladu s primjenjivim propisima i tehničkim mogućnostima sustava.</p>
+
+<h2>10. Vanjske usluge i poveznice</h2>
+<p>Aplikacija može sadržavati poveznice prema vanjskim uslugama, primjerice Googleu, TikToku ili drugim web-stranicama. Na obradu podataka na tim uslugama primjenjuju se njihove vlastite politike privatnosti i uvjeti korištenja.</p>
+
+<h2>11. Izmjene Politike privatnosti</h2>
+<p>Ova Politika može biti ažurirana kada se promijene funkcije aplikacije ili način obrade podataka. Nova verzija objavljuje se na ovoj stranici.</p>
+
+<div class="callout"><strong>Napomena:</strong> Ova stranica opisuje način rada PatriaSoul aplikacije i nije zamjena za individualni pravni savjet. Za primjenu konkretnih pravnih obveza mjerodavni su važeći propisi i stvarne okolnosti obrade podataka.</div>
+</article>
+</main>
+<footer class="footer"><span>© 2026 PatriaSoul. Sva prava pridržana.</span><span><a href="./terms.html">Uvjeti korištenja</a> · <a href="./">Pravilnik o igranju</a></span></footer>
+</body>
+</html>
