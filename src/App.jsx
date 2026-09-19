@@ -768,6 +768,14 @@ export default function App() {
     }
     if (mode === "daily") {
       openDaily();
+      return;
+    }
+    if (mode === "leaderboard") {
+      openLeaderboard();
+      return;
+    }
+    if (mode === "account") {
+      openAccount();
     }
   };
 
@@ -817,7 +825,7 @@ export default function App() {
 
   useEffect(() => {
     const mode = new URLSearchParams(window.location.search).get("mode");
-    if (!mode || !["croatian", "city", "cities", "daily"].includes(mode)) return;
+    if (!mode || !["croatian", "city", "cities", "daily", "leaderboard", "account"].includes(mode)) return;
 
     window.history.replaceState({}, "", window.location.pathname);
 
