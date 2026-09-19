@@ -784,7 +784,7 @@ export default function App() {
 
         <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-secondary/40 p-4">
           <input type="checkbox" checked={authRulesAccepted} onChange={(e) => setAuthRulesAccepted(e.target.checked)} className="mt-1 h-4 w-4 accent-red-700" />
-          <span className="text-sm">Prihvaćam <button type="button" onClick={() => setScreen("rules")} className="font-semibold text-accent underline">Pravilnik o igranju kvizova</button>.</span>
+          <span className="text-sm leading-6">Prihvaćam <button type="button" onClick={() => setScreen("rules")} className="font-semibold text-accent underline">Pravilnik o igranju</button>, <a href="./terms.html" target="_blank" rel="noreferrer" className="font-semibold text-accent underline">Uvjeti korištenja</a> i <a href="./privacy.html" target="_blank" rel="noreferrer" className="font-semibold text-accent underline">Politiku privatnosti</a>.</span>
         </label>
 
         {error && <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
@@ -1183,8 +1183,8 @@ export default function App() {
 
             <div className="patria-footer-legal">
               <button onClick={() => setScreen("rules")} className="patria-footer-link">Pravilnik o igranju</button>
-              <a href="/kviz/terms.html" className="patria-footer-link">Uvjeti korištenja</a>
-              <a href="/kviz/privacy.html" className="patria-footer-link">Politika privatnosti</a>
+              <a href="./terms.html" className="patria-footer-link">Uvjeti korištenja</a>
+              <a href="./privacy.html" className="patria-footer-link">Politika privatnosti</a>
             </div>
           </div>
         </div>
