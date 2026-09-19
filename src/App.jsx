@@ -585,6 +585,20 @@ export default function App() {
     }
   };
 
+  const openCroatianQuiz = () => {
+    setScreen("home");
+    setError("");
+    setRound([]);
+    setResult(null);
+    setActiveQuizType(null);
+    setActiveCategory(null);
+    setAttemptId(null);
+    setCity(null);
+    window.setTimeout(() => {
+      document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  };
+
   const home = () => {
     setScreen("home");
     setRound([]);
@@ -653,7 +667,7 @@ export default function App() {
 
         <nav className="patria-nav-desktop ml-auto flex items-center gap-1">
           <button onClick={home} className="patria-nav-link">⌂ Početna</button>
-          <button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-nav-link"><BookOpen className="h-4 w-4" /> Hrvatski kviz</button>
+          <button onClick={openCroatianQuiz} className="patria-nav-link"><BookOpen className="h-4 w-4" /> Hrvatski kviz</button>
           <button onClick={openCities} className="patria-nav-link"><MapPin className="h-4 w-4" /> Brani svoj grad</button>
           <button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button>
           <button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>
@@ -664,7 +678,7 @@ export default function App() {
         <summary className="patria-mobile-menu-button" aria-label="Otvori izbornik"><span aria-hidden="true">☰</span><span className="sr-only">Izbornik</span></summary>
         <nav id="patria-mobile-nav" className="patria-mobile-nav">
           <button onClick={home} className="patria-mobile-nav-link">⌂ <span>Početna</span></button>
-          <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" }); }} className="patria-mobile-nav-link"><BookOpen className="h-5 w-5" /><span>Hrvatski kviz</span></button>
+          <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCroatianQuiz(); }} className="patria-mobile-nav-link"><BookOpen className="h-5 w-5" /><span>Hrvatski kviz</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCities(); }} className="patria-mobile-nav-link"><MapPin className="h-5 w-5" /><span>Brani svoj grad</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openDaily(); }} className="patria-mobile-nav-link">📅 <span>Dnevni kviz</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openLeaderboard(); }} className="patria-mobile-nav-link"><Medal className="h-5 w-5" /><span>Rang-lista</span></button>
@@ -949,7 +963,7 @@ export default function App() {
           <div className="patria-card p-6">
             <h2 className="font-bold">Brzi pristup</h2>
             <div className="mt-4 grid gap-2">
-              <button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-button w-full justify-center">Hrvatski kviz</button>
+              <button onClick={openCroatianQuiz} className="patria-button w-full justify-center">Hrvatski kviz</button>
               <button onClick={openCities} className="patria-button w-full justify-center"><MapPin className="mr-2 h-4 w-4" /> Brani svoj grad</button>
               <button onClick={openDaily} className="patria-button w-full justify-center">📅 Dnevni kviz</button>
               <button onClick={() => openLeaderboard()} className="patria-button w-full justify-center"><Medal className="mr-2 h-4 w-4" /> Rang-lista</button>
@@ -1045,7 +1059,7 @@ export default function App() {
       {loadingLeaderboard ? <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam rang-listu...</div> : leaderboard.length === 0 ? <div className="patria-card p-10 text-center"><Medal className="mx-auto h-10 w-10 text-accent" /><h2 className="mt-4 text-2xl font-bold">Još nema rezultata</h2><p className="mt-2 text-muted-foreground">Prvi spremljeni rezultati pojavit će se ovdje.</p></div> : <div className="overflow-hidden rounded-xl border border-border bg-card"><div className="grid grid-cols-[48px_1fr_90px_110px] gap-3 border-b border-border bg-secondary/60 px-4 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground"><span>#</span><span>Igrač</span><span>Najbolje</span><span>Odigrano</span></div>{leaderboard.map((player, index) => <div key={`${player.display_name}-${index}`} className="grid grid-cols-[48px_1fr_90px_110px] items-center gap-3 border-b border-border px-4 py-4 last:border-0"><span className="font-bold text-muted-foreground">{index + 1}</span><div><p className="font-semibold">{player.display_name}</p><p className="text-xs text-muted-foreground">Prosjek {Number(player.average_percentage).toFixed(1)}%</p></div><span className="font-bold text-accent">{Number(player.best_percentage).toFixed(0)}%</span><span className="text-sm">{player.quizzes_played}</span></div>)}</div>}
     </main>}
 
-    <footer className="patria-footer"><div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12"><div className="grid gap-8 md:grid-cols-[1.3fr_1fr_1fr]"><div><div className="flex items-center gap-3"><span className="patria-brand-mark flex items-center"><img src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="PatriaSoul" className="h-12 w-auto object-contain" /></span></div><p className="mt-5 max-w-md text-sm text-white/55">Hrvatska · povijest · znanje · identitet. Prostor za učenje, igru i čuvanje priča koje čine naše nasljeđe.</p></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">Brzi pristup</p><div className="mt-4 grid gap-2 text-sm text-white/70"><button onClick={home} className="text-left hover:text-white">Početna</button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="text-left hover:text-white">Hrvatski kviz</button><button onClick={openCities} className="text-left hover:text-white">Brani svoj grad</button><button onClick={() => openLeaderboard()} className="text-left hover:text-white">Rang-lista</button></div></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">PatriaSoul</p><p className="mt-4 max-w-xs text-sm text-white/60">Prati PatriaSoul na TikToku i budi uz nas dok kroz kratke priče, zanimljivosti i kvizove upoznajemo Hrvatsku.</p>
+    <footer className="patria-footer"><div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12"><div className="grid gap-8 md:grid-cols-[1.3fr_1fr_1fr]"><div><div className="flex items-center gap-3"><span className="patria-brand-mark flex items-center"><img src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="PatriaSoul" className="h-12 w-auto object-contain" /></span></div><p className="mt-5 max-w-md text-sm text-white/55">Hrvatska · povijest · znanje · identitet. Prostor za učenje, igru i čuvanje priča koje čine naše nasljeđe.</p></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">Brzi pristup</p><div className="mt-4 grid gap-2 text-sm text-white/70"><button onClick={home} className="text-left hover:text-white">Početna</button><button onClick={openCroatianQuiz} className="text-left hover:text-white">Hrvatski kviz</button><button onClick={openCities} className="text-left hover:text-white">Brani svoj grad</button><button onClick={() => openLeaderboard()} className="text-left hover:text-white">Rang-lista</button></div></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">PatriaSoul</p><p className="mt-4 max-w-xs text-sm text-white/60">Prati PatriaSoul na TikToku i budi uz nas dok kroz kratke priče, zanimljivosti i kvizove upoznajemo Hrvatsku.</p>
 <a href="https://www.tiktok.com/@patriasoul" target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/15">
   <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M16.6 3c.3 1.8 1.3 3.1 3.4 3.5v3.1c-1.5-.1-2.8-.6-4-1.5v6.4c0 4.1-2.8 6.5-6.3 6.5-3.3 0-5.7-2.2-5.7-5.3 0-3.4 2.7-5.7 6.3-5.7.3 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.5 0-2.9.9-2.9 2.5 0 1.4 1 2.4 2.4 2.4 1.8 0 2.8-1.3 2.8-3.6V3h4z"/></svg>
   Prati nas na TikToku
