@@ -9,6 +9,7 @@ import { getLeaderboard, getMyResults, getMyResultStats, hasPlayedDailyQuiz } fr
 import { startQuizAttempt, finishQuizAttempt } from "./lib/attempts";
 import { getMyProfile, saveMyNickname } from "./lib/profile";
 import { getMyProgress } from "./lib/progress";
+import { getAdminDashboardStats, getAdminUsers, getAdminQuizResults, deleteAdminQuizResult } from "./lib/admin";
 import { supabase } from "./lib/supabase";
 
 const categories = [
@@ -67,6 +68,10 @@ export default function App() {
   const [nickname, setNickname] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
   const [playerProgress, setPlayerProgress] = useState([]);
+  const [adminStats, setAdminStats] = useState(null);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminResults, setAdminResults] = useState([]);
+  const [loadingAdmin, setLoadingAdmin] = useState(false);
 
   const accountStats = (() => {
     const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
@@ -398,6 +403,43 @@ export default function App() {
       setAccountResultCount(0);
     } finally {
       setLoadingAccount(false);
+    }
+  };
+
+  const openAdmin = async () => {
+    if (!user || profile?.role !== "admin") {
+      setError("Administracija je dostupna samo administratoru.");
+      return;
+    }
+    setError("");
+    setScreen("admin");
+    setLoadingAdmin(true);
+    try {
+      const [stats, users, results] = await Promise.all([
+        getAdminDashboardStats(),
+        getAdminUsers(),
+        getAdminQuizResults(),
+      ]);
+      setAdminStats(stats);
+      setAdminUsers(users);
+      setAdminResults(results);
+    } catch (e) {
+      setError(e.message || "Administracija se trenutno ne može učitati.");
+    } finally {
+      setLoadingAdmin(false);
+    }
+  };
+
+  const removeAdminResult = async (resultId) => {
+    if (!user || profile?.role !== "admin") return;
+    if (!window.confirm("Obrisati ovaj rezultat?")) return;
+    try {
+      await deleteAdminQuizResult(resultId);
+      setAdminResults((rows) => rows.filter((row) => row.id !== resultId));
+      const stats = await getAdminDashboardStats();
+      setAdminStats(stats);
+    } catch (e) {
+      setError(e.message || "Rezultat se ne može obrisati.");
     }
   };
 
@@ -896,7 +938,15 @@ export default function App() {
               <div><div className="mb-1 flex justify-between text-sm"><span>Brani svoj grad</span><strong>{accountStats.city}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: "${Math.min(accountStats.city * 10, 100)}%" }} /></div></div>
               <div><div className="mb-1 flex justify-between text-sm"><span>Dnevni kviz</span><strong>{accountStats.daily}</strong></div><div className="h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-accent" style={{ width: "${Math.min(accountStats.daily * 10, 100)}%" }} /></div></div>
             </div>
-          </div>          <div className="patria-card p-6">
+          </div>          {profile?.role === "admin" && <div className="patria-card border-accent/40 bg-accent/5 p-6">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="h-5 w-5 text-accent" />
+              <div><h2 className="font-bold">Administracija</h2><p className="text-sm text-muted-foreground">Samo za PatriaSoul administratora.</p></div>
+            </div>
+            <button onClick={openAdmin} className="patria-button-accent mt-4 w-full justify-center"><ShieldCheck className="mr-2 h-4 w-4" /> Otvori administraciju</button>
+          </div>}
+
+          <div className="patria-card p-6">
             <h2 className="font-bold">Brzi pristup</h2>
             <div className="mt-4 grid gap-2">
               <button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-button w-full justify-center">Hrvatski kviz</button>
@@ -954,6 +1004,39 @@ export default function App() {
           )}
         </section>
       </div>
+    </main>}
+
+    {screen === "admin" && <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul · Administrator</p>
+          <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">Administracija</h1>
+          <p className="mt-2 text-muted-foreground">Upravljanje korisnicima, rezultatima i osnovnom statistikom.</p>
+        </div>
+        <button onClick={openAccount} className="patria-button self-start sm:self-auto"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag na profil</button>
+      </div>
+      {error && <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+      {loadingAdmin ? <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam administraciju...</div> : <>
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {[
+            ["Korisnici", adminStats?.total_users ?? 0],
+            ["Aktivni 30 dana", adminStats?.active_users_30d ?? 0],
+            ["Rezultati", adminStats?.total_results ?? 0],
+            ["Rezultati 30 dana", adminStats?.results_30d ?? 0],
+            ["Ukupno XP", adminStats?.total_xp ?? 0],
+          ].map(([label, value]) => <div key={label} className="patria-card p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold">{Number(value).toLocaleString("hr-HR")}</p></div>)}
+        </section>
+
+        <section className="mt-6 patria-card overflow-hidden">
+          <div className="border-b border-border bg-secondary/40 px-6 py-5"><h2 className="text-xl font-bold">Korisnici</h2><p className="mt-1 text-sm text-muted-foreground">{adminUsers.length} korisnika</p></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-3">Nadimak</th><th className="px-5 py-3">E-mail</th><th className="px-5 py-3">Uloga</th><th className="px-5 py-3">Kvizovi</th><th className="px-5 py-3">XP</th><th className="px-5 py-3">Zadnji kviz</th></tr></thead><tbody className="divide-y divide-border">{adminUsers.map((row) => <tr key={row.id}><td className="px-5 py-3 font-semibold">{row.display_name || "Bez nadimka"}</td><td className="px-5 py-3 text-muted-foreground">{row.email}</td><td className="px-5 py-3"><span className="rounded-full bg-secondary px-2 py-1 text-xs font-bold">{row.role}</span></td><td className="px-5 py-3">{row.total_quizzes}</td><td className="px-5 py-3">{row.total_xp}</td><td className="px-5 py-3 text-muted-foreground">{row.last_quiz_at ? new Date(row.last_quiz_at).toLocaleString("hr-HR") : "—"}</td></tr>)}</tbody></table></div>
+        </section>
+
+        <section className="mt-6 patria-card overflow-hidden">
+          <div className="border-b border-border bg-secondary/40 px-6 py-5"><h2 className="text-xl font-bold">Rezultati kvizova</h2><p className="mt-1 text-sm text-muted-foreground">{adminResults.length} rezultata</p></div>
+          <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-3">Igrač</th><th className="px-5 py-3">Kviz</th><th className="px-5 py-3">Rezultat</th><th className="px-5 py-3">Postotak</th><th className="px-5 py-3">Datum</th><th className="px-5 py-3"></th></tr></thead><tbody className="divide-y divide-border">{adminResults.map((row) => <tr key={row.id}><td className="px-5 py-3"><p className="font-semibold">{row.user_name || "Bez nadimka"}</p><p className="text-xs text-muted-foreground">{row.user_email}</p></td><td className="px-5 py-3">{row.quiz_type === "city" ? "Brani svoj grad" : row.quiz_type === "daily" ? "Dnevni kviz" : row.category || "Hrvatski kviz"}</td><td className="px-5 py-3 font-bold">{row.score} / {row.total}</td><td className="px-5 py-3">{Number(row.percentage).toFixed(0)}%</td><td className="px-5 py-3 text-muted-foreground">{new Date(row.created_at).toLocaleString("hr-HR")}</td><td className="px-5 py-3 text-right"><button onClick={() => removeAdminResult(row.id)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Obriši</button></td></tr>)}</tbody></table></div>
+        </section>
+      </>}
     </main>}
 
     {screen === "leaderboard" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h1 className="mt-2 font-display text-4xl font-bold">Rang-lista</h1><p className="mt-2 text-muted-foreground">Rezultati igrača koji su svoje rezultate spremili u PatriaSoul.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
