@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://patriasoul.github.io/kviz/sitemap.xml
