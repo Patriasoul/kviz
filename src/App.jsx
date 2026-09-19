@@ -858,7 +858,7 @@ export default function App() {
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCities(); }} className="patria-mobile-nav-link"><MapPin className="h-5 w-5" /><span>Brani svoj grad</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openDaily(); }} className="patria-mobile-nav-link">📅 <span>Dnevni kviz</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openLeaderboard(); }} className="patria-mobile-nav-link"><Medal className="h-5 w-5" /><span>Rang-lista</span></button>
-          {user && <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCommunity(); }} className="patria-mobile-nav-link"><MessageCircle className="h-5 w-5" /><span>Zajednica</span></button>
+          {user && <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCommunity(); }} className="patria-mobile-nav-link"><MessageCircle className="h-5 w-5" /><span>Zajednica</span></button>}
           {user ? <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openAccount(); }} className="patria-mobile-nav-link"><UserRound className="h-5 w-5" /><span>{accountDisplayName}</span></button> : <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); signIn(); }} className="patria-mobile-nav-link"><LogIn className="h-5 w-5" /><span>Prijava</span></button>}
         </nav>
       </details>
