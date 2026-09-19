@@ -1182,7 +1182,7 @@ export default function App() {
             </div>
 
             <div className="patria-footer-legal">
-              <button onClick={() => setScreen("rules")} className="patria-footer-link">Pravilnik o igranju</button>
+              <a href="./rules.html" className="patria-footer-link">Pravilnik o igranju</a>
               <a href="./terms.html" className="patria-footer-link">Uvjeti korištenja</a>
               <a href="./privacy.html" className="patria-footer-link">Politika privatnosti</a>
             </div>
