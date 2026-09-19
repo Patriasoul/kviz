@@ -1320,6 +1320,7 @@ export default function App() {
 
       {communityLoading ? <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam zajednicu...</div> :
         communityComments.length === 0 ? <div className="patria-card p-10 text-center"><MessageCircle className="mx-auto h-10 w-10 text-accent" /><h2 className="mt-4 text-2xl font-bold">Budi prvi koji će nešto napisati</h2><p className="mt-2 text-muted-foreground">Pozdravi ostale igrače i pokreni prvi razgovor.</p></div> :
+        <>
         <section className="space-y-3">
           {communityComments.filter((comment) => !comment.parent_id).map((comment) => {
             const replies = communityComments.filter((reply) => reply.parent_id === comment.id);
@@ -1370,6 +1371,7 @@ export default function App() {
             {communityLoadingMore ? "Učitavam..." : "Učitaj još komentara"}
           </button>
         </div>}
+        </>
     </main>}
 
     {screen === "leaderboard" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h1 className="mt-2 font-display text-4xl font-bold">Rang-lista</h1><p className="mt-2 text-muted-foreground">Rezultati igrača koji su svoje rezultate spremili u PatriaSoul.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
