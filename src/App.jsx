@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen } from "lucide-react";
+import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen, MessageCircle, Send, Reply, Trash2, AtSign } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
 import { fetchCities } from "./lib/cityQuiz";
@@ -11,6 +11,7 @@ import { getMyProfile, saveMyNickname } from "./lib/profile";
 import { getMyProgress } from "./lib/progress";
 import { getAdminDashboardStats, getAdminUsers, getAdminQuizResults, deleteAdminQuizResult } from "./lib/admin";
 import { supabase } from "./lib/supabase";
+import { getCommunityComments, createCommunityComment, deleteCommunityComment, getCommunityMembers } from "./lib/community";
 
 const categories = [
   ["opce", "Hrvatsko opće znanje", "Raznoliko znanje o Hrvatskoj."],
@@ -73,6 +74,14 @@ export default function App() {
   const [adminResults, setAdminResults] = useState([]);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [pendingDeepLink, setPendingDeepLink] = useState(null);
+  const [communityComments, setCommunityComments] = useState([]);
+  const [communityMembers, setCommunityMembers] = useState([]);
+  const [communityLoading, setCommunityLoading] = useState(false);
+  const [communitySending, setCommunitySending] = useState(false);
+  const [communityText, setCommunityText] = useState("");
+  const [communityReplyTo, setCommunityReplyTo] = useState(null);
+  const [communityMentionQuery, setCommunityMentionQuery] = useState("");
+  const [communityMentionOpen, setCommunityMentionOpen] = useState(false);
 
   const accountStats = (() => {
     const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
@@ -525,6 +534,121 @@ export default function App() {
     }
   };
 
+  const openCommunity = async () => {
+    if (!user) {
+      requireAuth(openCommunity);
+      return;
+    }
+    setError("");
+    setScreen("community");
+    setCommunityLoading(true);
+    try {
+      const [comments, members] = await Promise.all([
+        getCommunityComments(),
+        getCommunityMembers(),
+      ]);
+      setCommunityComments(comments);
+      setCommunityMembers(members);
+    } catch (e) {
+      setError(e.message || "Zajednica se trenutno ne može učitati.");
+    } finally {
+      setCommunityLoading(false);
+    }
+  };
+
+  const refreshCommunity = async () => {
+    try {
+      setCommunityComments(await getCommunityComments());
+    } catch (e) {
+      setError(e.message || "Komentari se trenutno ne mogu učitati.");
+    }
+  };
+
+  const selectCommunityMention = (member) => {
+    const token = communityMentionQuery ? "@" + communityMentionQuery : "@";
+    const value = communityText;
+    const index = value.lastIndexOf(token);
+    const prefix = index >= 0 ? value.slice(0, index) : value;
+    const next = prefix + "@" + member.display_name + " ";
+    setCommunityText(next);
+    setCommunityMentionQuery("");
+    setCommunityMentionOpen(false);
+  };
+
+  const handleCommunityTextChange = (value) => {
+    setCommunityText(value.slice(0, 1000));
+    const match = value.match(/(?:^|\s)@([^\s@]{0,24})$/);
+    if (match) {
+      setCommunityMentionQuery(match[1]);
+      setCommunityMentionOpen(true);
+    } else {
+      setCommunityMentionQuery("");
+      setCommunityMentionOpen(false);
+    }
+  };
+
+  const submitCommunityComment = async () => {
+    if (!user) {
+      requireAuth(openCommunity);
+      return;
+    }
+    const clean = communityText.trim();
+    if (!clean) {
+      setError("Napiši komentar prije slanja.");
+      return;
+    }
+    setCommunitySending(true);
+    setError("");
+    try {
+      await createCommunityComment({
+        content: clean,
+        parentId: communityReplyTo?.id || null,
+      });
+      setCommunityText("");
+      setCommunityReplyTo(null);
+      setCommunityMentionQuery("");
+      setCommunityMentionOpen(false);
+      await refreshCommunity();
+    } catch (e) {
+      setError(e.message || "Komentar nije poslan.");
+    } finally {
+      setCommunitySending(false);
+    }
+  };
+
+  const removeCommunityComment = async (commentId) => {
+    if (!user) return;
+    try {
+      await deleteCommunityComment(commentId);
+      await refreshCommunity();
+    } catch (e) {
+      setError(e.message || "Komentar nije moguće obrisati.");
+    }
+  };
+
+  const formatCommunityTime = (value) => {
+    const date = new Date(value);
+    return date.toLocaleString("hr-HR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  useEffect(() => {
+    if (!supabase || !user || screen !== "community") return undefined;
+    const channel = supabase
+      .channel("patriasoul-community-comments")
+      .on("postgres_changes", { event: "*", schema: "public", table: "community_comments" }, () => {
+        refreshCommunity();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, screen]);
+
   const openLeaderboard = async (type = null) => {
     setError("");
     setScreen("leaderboard");
@@ -714,6 +838,7 @@ export default function App() {
           <button onClick={openCities} className="patria-nav-link"><MapPin className="h-4 w-4" /> Brani svoj grad</button>
           <button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button>
           <button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>
+          {user && <button onClick={openCommunity} className="patria-nav-link"><MessageCircle className="h-4 w-4" /> Zajednica</button>}
           {user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> {accountDisplayName}</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Prijava</button>}
         </nav>
 
@@ -725,6 +850,7 @@ export default function App() {
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCities(); }} className="patria-mobile-nav-link"><MapPin className="h-5 w-5" /><span>Brani svoj grad</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openDaily(); }} className="patria-mobile-nav-link">📅 <span>Dnevni kviz</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openLeaderboard(); }} className="patria-mobile-nav-link"><Medal className="h-5 w-5" /><span>Rang-lista</span></button>
+          {user && <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCommunity(); }} className="patria-mobile-nav-link"><MessageCircle className="h-5 w-5" /><span>Zajednica</span></button>
           {user ? <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openAccount(); }} className="patria-mobile-nav-link"><UserRound className="h-5 w-5" /><span>{accountDisplayName}</span></button> : <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); signIn(); }} className="patria-mobile-nav-link"><LogIn className="h-5 w-5" /><span>Prijava</span></button>}
         </nav>
       </details>
@@ -1094,6 +1220,112 @@ export default function App() {
           <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground"><tr><th className="px-5 py-3">Igrač</th><th className="px-5 py-3">Kviz</th><th className="px-5 py-3">Rezultat</th><th className="px-5 py-3">Postotak</th><th className="px-5 py-3">Datum</th><th className="px-5 py-3"></th></tr></thead><tbody className="divide-y divide-border">{adminResults.map((row) => <tr key={row.id}><td className="px-5 py-3"><p className="font-semibold">{row.user_name || "Bez nadimka"}</p><p className="text-xs text-muted-foreground">{row.user_email}</p></td><td className="px-5 py-3">{row.quiz_type === "city" ? "Brani svoj grad" : row.quiz_type === "daily" ? "Dnevni kviz" : row.category || "Hrvatski kviz"}</td><td className="px-5 py-3 font-bold">{row.score} / {row.total}</td><td className="px-5 py-3">{Number(row.percentage).toFixed(0)}%</td><td className="px-5 py-3 text-muted-foreground">{new Date(row.created_at).toLocaleString("hr-HR")}</td><td className="px-5 py-3 text-right"><button onClick={() => removeAdminResult(row.id)} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-50">Obriši</button></td></tr>)}</tbody></table></div>
         </section>
       </>}
+    </main>}
+
+    {screen === "community" && <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul zajednica</p>
+          <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">Zajednica</h1>
+          <p className="mt-2 max-w-2xl text-muted-foreground">Pozdravi druge igrače, podijeli rezultat ili odgovori na komentar. Nadimci ostaju dio PatriaSoul zajednice.</p>
+        </div>
+        <button onClick={home} className="patria-button self-start sm:self-auto"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button>
+      </div>
+
+      {error && <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+
+      <section className="patria-card mb-7 overflow-visible">
+        <div className="border-b border-border bg-primary/70 px-5 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
+            <div className="patria-icon-ring"><MessageCircle className="h-5 w-5" /></div>
+            <div>
+              <h2 className="text-xl font-bold">Napiši nešto</h2>
+              <p className="text-sm text-muted-foreground">Možeš odgovoriti i tako da nekoga označiš s @nadimak.</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-5 sm:p-6">
+          {communityReplyTo && <div className="mb-3 flex items-center justify-between rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-sm">
+            <span className="flex items-center gap-2 text-muted-foreground"><Reply className="h-4 w-4 text-accent" /> Odgovaraš korisniku <strong className="text-foreground">@{communityReplyTo.display_name}</strong></span>
+            <button type="button" onClick={() => setCommunityReplyTo(null)} className="text-xs font-bold text-accent hover:text-white">Odustani</button>
+          </div>}
+          <div className="relative">
+            <textarea
+              value={communityText}
+              onChange={(e) => handleCommunityTextChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setCommunityMentionOpen(false);
+                if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  submitCommunityComment();
+                }
+              }}
+              maxLength={1000}
+              rows={4}
+              placeholder={communityReplyTo ? `Odgovori @${communityReplyTo.display_name}...` : "Pozdravi ekipu, napiši kako ti je prošao kviz..."}
+              className="w-full resize-y rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/20"
+            />
+            {communityMentionOpen && communityMembers.length > 0 && <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-accent/30 bg-card shadow-2xl">
+              <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Označi igrača</div>
+              {communityMembers.filter((member) => member.display_name?.toLowerCase().includes(communityMentionQuery.toLowerCase())).slice(0, 6).map((member) => (
+                <button key={member.id} type="button" onClick={() => selectCommunityMention(member)} className="flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-white/5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-accent/30 bg-accent/10 text-xs font-bold text-accent">{member.display_name?.slice(0,1).toUpperCase()}</span>
+                  <span className="font-semibold">{member.display_name}</span>
+                </button>
+              ))}
+            </div>}
+          </div>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-muted-foreground">{communityText.length}/1000 · Ctrl+Enter za slanje</span>
+            <button disabled={communitySending || !communityText.trim()} onClick={submitCommunityComment} className="patria-button-accent disabled:cursor-not-allowed disabled:opacity-50">
+              {communitySending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+              {communitySending ? "Šaljem..." : "Objavi komentar"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {communityLoading ? <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam zajednicu...</div> :
+        communityComments.length === 0 ? <div className="patria-card p-10 text-center"><MessageCircle className="mx-auto h-10 w-10 text-accent" /><h2 className="mt-4 text-2xl font-bold">Budi prvi koji će nešto napisati</h2><p className="mt-2 text-muted-foreground">Pozdravi ostale igrače i pokreni prvi razgovor.</p></div> :
+        <section className="space-y-3">
+          {communityComments.filter((comment) => !comment.parent_id).map((comment) => {
+            const replies = communityComments.filter((reply) => reply.parent_id === comment.id);
+            const canDelete = user?.id === comment.user_id || profile?.role === "admin";
+            return <article key={comment.id} className="patria-card p-5 sm:p-6">
+              <div className="flex gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-accent/10 font-bold text-accent">{comment.display_name?.slice(0,1).toUpperCase() || "P"}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <strong>{comment.display_name || "PatriaSoul igrač"}</strong>
+                    <span className="text-xs text-muted-foreground">{formatCommunityTime(comment.created_at)}</span>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap break-words text-[.95rem] leading-7 text-foreground/90">{comment.content}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button type="button" onClick={() => { setCommunityReplyTo(comment); setCommunityText(""); setCommunityMentionQuery(""); setCommunityMentionOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="inline-flex items-center gap-1.5 text-xs font-bold text-accent hover:text-white"><Reply className="h-3.5 w-3.5" /> Odgovori</button>
+                    {canDelete && <button type="button" onClick={() => removeCommunityComment(comment.id)} className="inline-flex items-center gap-1.5 text-xs font-bold text-red-300 hover:text-red-200"><Trash2 className="h-3.5 w-3.5" /> Obriši</button>}
+                  </div>
+                  {replies.length > 0 && <div className="mt-4 space-y-2 border-l-2 border-accent/25 pl-4">
+                    {replies.map((reply) => {
+                      const canDeleteReply = user?.id === reply.user_id || profile?.role === "admin";
+                      return <div key={reply.id} className="rounded-lg border border-border bg-background/50 p-4">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/10 text-xs font-bold text-accent">{reply.display_name?.slice(0,1).toUpperCase() || "P"}</span>
+                          <strong className="text-sm">{reply.display_name || "PatriaSoul igrač"}</strong>
+                          <span className="text-xs text-muted-foreground">{formatCommunityTime(reply.created_at)}</span>
+                        </div>
+                        <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-foreground/85">{reply.content}</p>
+                        <div className="mt-2 flex gap-3">
+                          <button type="button" onClick={() => { setCommunityReplyTo(reply); setCommunityText(""); setCommunityMentionQuery(""); setCommunityMentionOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="inline-flex items-center gap-1 text-xs font-bold text-accent hover:text-white"><Reply className="h-3.5 w-3.5" /> Odgovori</button>
+                          {canDeleteReply && <button type="button" onClick={() => removeCommunityComment(reply.id)} className="inline-flex items-center gap-1 text-xs font-bold text-red-300 hover:text-red-200"><Trash2 className="h-3.5 w-3.5" /> Obriši</button>}
+                        </div>
+                      </div>;
+                    })}
+                  </div>}
+                </div>
+              </div>
+            </article>;
+          })}
+        </section>}
     </main>}
 
     {screen === "leaderboard" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h1 className="mt-2 font-display text-4xl font-bold">Rang-lista</h1><p className="mt-2 text-muted-foreground">Rezultati igrača koji su svoje rezultate spremili u PatriaSoul.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
