@@ -136,8 +136,13 @@
       </div>
     </footer>`;
 
-  const shell = document.createElement("div");
-  shell.id = "patria-shared-shell";
-  shell.innerHTML = header + footer;
-  document.body.insertBefore(shell, document.body.firstChild);
+  const headerShell = document.createElement("div");
+  headerShell.id = "patria-shared-shell";
+  headerShell.innerHTML = header;
+  document.body.insertBefore(headerShell, document.body.firstChild);
+
+  const footerShell = document.createElement("div");
+  footerShell.id = "patria-shared-footer";
+  footerShell.innerHTML = footer;
+  document.body.appendChild(footerShell);
 })();
