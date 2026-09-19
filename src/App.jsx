@@ -583,7 +583,10 @@ export default function App() {
 
   const refreshCommunity = async () => {
     try {
-      setCommunityComments(await getCommunityComments());
+      const commentsPage = await getCommunityComments(1, 20);
+      setCommunityComments(commentsPage.data);
+      setCommunityPage(1);
+      setCommunityHasMore(commentsPage.hasMore);
     } catch (e) {
       setError(e.message || "Komentari se trenutno ne mogu učitati.");
     }
