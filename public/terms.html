@@ -1,35 +1,94 @@
 <!doctype html>
 <html lang="hr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071426">
+<meta name="description" content="Uvjeti korištenja i igranja PatriaSoul kvizova.">
 <title>Uvjeti korištenja — PatriaSoul</title>
 <style>
-:root{color-scheme:dark;--bg:#0d1117;--card:#151b23;--text:#f3f4f6;--muted:#a9b1bd;--accent:#d9b44a;--red:#b51f2a}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(135deg,#10151d,#0b0e13);color:var(--text);line-height:1.7}
-header{border-bottom:1px solid #29313d;background:#11161d;padding:18px 24px}header a{color:white;text-decoration:none;font-weight:800}
-main{max-width:900px;margin:0 auto;padding:48px 20px 70px}.card{background:var(--card);border:1px solid #2b3440;border-radius:18px;padding:30px}h1{font-size:clamp(2rem,5vw,3.4rem);margin:.2em 0;color:white}h2{margin-top:2em;color:#f1d078}p,li{color:#d0d6de}a{color:#f1d078}small{color:var(--muted)}
-.btn{display:inline-block;margin-bottom:20px;padding:9px 14px;border:1px solid #394453;border-radius:9px;color:white;text-decoration:none}
+:root{color-scheme:dark;--bg:#061321;--bg2:#0a1b2d;--card:#0f2235;--card2:#122a40;--text:#f5f7fa;--muted:#b6c1cd;--gold:#f1d078;--red:#b51f35;--blue:#193452;--line:rgba(255,255,255,.10)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 50% -10%,rgba(35,78,116,.38),transparent 38rem),linear-gradient(135deg,var(--bg),#040c15);color:var(--text);line-height:1.75}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.035;background:repeating-linear-gradient(45deg,#fff 0 1px,transparent 1px 14px)}
+.topline{height:4px;background:linear-gradient(90deg,var(--red) 0 33.333%,#f7f7f7 33.333% 66.666%,var(--blue) 66.666% 100%)}
+header{position:sticky;top:0;z-index:10;border-bottom:1px solid rgba(241,208,120,.20);background:rgba(6,19,33,.92);backdrop-filter:blur(12px)}
+.header-inner{max-width:1100px;margin:auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:inline-flex;align-items:center;text-decoration:none}
+.logo{height:54px;width:auto;max-width:190px;object-fit:contain}
+.back{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:9px 13px;color:#fff;text-decoration:none;font-weight:700;background:rgba(255,255,255,.045)}
+.back:hover{border-color:rgba(241,208,120,.45);color:var(--gold)}
+main{max-width:960px;margin:auto;padding:42px 20px 72px}
+.hero{position:relative;overflow:hidden;border:1px solid rgba(241,208,120,.20);border-radius:22px 22px 0 0;padding:34px 30px;background:linear-gradient(135deg,rgba(25,52,82,.94),rgba(9,25,41,.98))}
+.hero:after{content:"";position:absolute;right:-90px;top:-120px;width:300px;height:300px;border-radius:50%;background:rgba(241,208,120,.07)}
+.kicker{position:relative;z-index:1;color:#f1d078;font-size:.72rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+h1{position:relative;z-index:1;margin:7px 0 0;font-size:clamp(2rem,5vw,3.4rem);line-height:1.1}
+.subtitle{position:relative;z-index:1;margin:12px 0 0;color:rgba(255,255,255,.72)}
+.card{border:1px solid var(--line);border-top:0;border-radius:0 0 22px 22px;background:rgba(15,34,53,.96);padding:30px}
+h2{margin:2rem 0 .6rem;color:var(--gold);font-size:1.25rem}
+h2:first-child{margin-top:0}
+p,li{color:#d2dae3}
+a{color:var(--gold)}
+ul{padding-left:1.3rem}
+.meta{font-size:.78rem;color:#8f9cab;margin:0 0 20px}
+.callout{margin-top:28px;padding:16px 18px;border:1px solid rgba(241,208,120,.18);border-radius:12px;background:rgba(241,208,120,.045);color:#dbe2e9}
+.footer{max-width:960px;margin:auto;padding:0 20px 34px;color:#718092;font-size:.78rem;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:640px){.header-inner{padding:10px 14px}.logo{height:46px}.back{font-size:.8rem}.hero{padding:28px 22px}.card{padding:24px 20px}main{padding:28px 14px 55px}}
 </style>
 </head>
-<body><header><a href="./">🇭🇷 PatriaSoul</a></header>
-<main><div class="card">
-<a class="btn" href="./">← Natrag na kviz</a>
-<p><small>Uvjeti korištenja · ažurirano 18. rujna 2026.</small></p>
+<body>
+<div class="topline"></div>
+<header><div class="header-inner">
+<a class="brand" href="./" aria-label="PatriaSoul početna"><img class="logo" src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="PatriaSoul"></a>
+<a class="back" href="./">← Natrag na kviz</a>
+</div></header>
+<main>
+<section class="hero">
+<div class="kicker">PatriaSoul · Znanje · Ponos · Nasljeđe</div>
 <h1>Uvjeti korištenja i igranja</h1>
-<p>PatriaSoul je digitalni prostor za učenje, provjeru znanja i upoznavanje hrvatske povijesti, geografije, kulture, baštine i drugih tema povezanih s Hrvatskom.</p>
-<h2>1. Korištenje kviza</h2>
-<ul><li>Kviz je namijenjen učenju, zabavi i provjeri znanja.</li><li>Korisnik treba koristiti svoj račun i podatke za prijavu na odgovoran način.</li><li>Nije dopušteno namjerno ometanje rada aplikacije, pokušaji neovlaštenog pristupa, automatizirano slanje zahtjeva ili manipuliranje rezultatima.</li></ul>
-<h2>2. Nadimak, račun i rang-lista</h2>
-<p>Za sudjelovanje u rang-listi korisnik koristi jedinstveni nadimak. Nadimak je javno ime igrača i prikazuje se umjesto e-mail adrese. Dva korisnika ne mogu imati isti nadimak.</p>
-<p>E-mail adresa služi za prijavu i upravljanje korisničkim računom te se ne prikazuje javno na rang-listi. Korisnik ne treba koristiti svoju e-mail adresu kao javno ime igrača.</p>
-<h2>3. Rezultati i rang-lista</h2>
-<p>Rezultati se mogu povezati s korisničkim računom i prikazivati u rang-listi prema pravilima aplikacije. PatriaSoul može ukloniti očito nevažeće ili tehnički kompromitirane rezultate.</p>
-<h2>4. Sadržaj pitanja</h2>
-<p>Pitanja služe obrazovanju i provjeri znanja. Izvori i činjenični podaci mogu se ažurirati, a korisnik prihvaća da se sadržaj kviza može mijenjati radi poboljšanja točnosti i kvalitete.</p>
-<h2>5. Korisnički račun</h2>
-<p>Korisnik je odgovoran za čuvanje svojih pristupnih podataka. Prijava putem Googlea ili TikToka podliježe i pravilima tih pružatelja usluge.</p>
-<h2>6. Izmjene pravila</h2>
-<p>PatriaSoul može izmijeniti ova pravila kada je to potrebno zbog promjene funkcionalnosti, sigurnosti ili načina rada aplikacije. Važeća verzija objavljuje se na ovoj stranici.</p>
-<h2>7. Kontakt</h2>
-<p>Za pitanja o pravilima korištenja korisnik može koristiti kontakt kanal naveden na službenoj PatriaSoul stranici.</p>
-</div></main></body></html>
+<p class="subtitle">Pravila korištenja PatriaSoul aplikacije, korisničkih računa i kvizova.</p>
+</section>
+<article class="card">
+<p class="meta">Zadnje ažuriranje: 18. rujna 2026.</p>
+<h2>1. Opće odredbe</h2>
+<p>PatriaSoul je digitalni prostor za učenje, provjeru znanja i upoznavanje hrvatske povijesti, geografije, kulture, baštine, prirode, sporta, znanosti i drugih tema povezanih s Hrvatskom.</p>
+<p>Korištenjem aplikacije korisnik prihvaća ove Uvjete korištenja i Pravilnik o igranju kvizova. Ako se s njima ne slaže, ne treba koristiti funkcije za koje je potrebno prihvaćanje pravila.</p>
+
+<h2>2. Korištenje kvizova</h2>
+<ul>
+<li>Kvizovi su namijenjeni učenju, zabavi i provjeri znanja.</li>
+<li>Korisnik treba koristiti vlastiti korisnički račun kada je za određeni način igre potrebna prijava.</li>
+<li>Nije dopušteno namjerno ometati rad aplikacije, neovlašteno pristupati sustavima ili pokušavati zaobići sigurnosne mehanizme.</li>
+<li>Nije dopušteno koristiti botove, automatizirane skripte ili druga sredstva za ostvarivanje nepravedne prednosti.</li>
+</ul>
+
+<h2>3. Korisnički račun i nadimak</h2>
+<p>Za funkcije povezane s računom korisnik može koristiti podržani način prijave. Javnim prikazima rezultata upravlja odabrani nadimak, a ne e-mail adresa.</p>
+<p>Nadimak mora biti između 3 i 24 znaka i jedinstven je među korisnicima. Korisnik je odgovoran za korištenje računa i za čuvanje svojih pristupnih podataka.</p>
+
+<h2>4. Rezultati i rang-lista</h2>
+<p>Rezultati mogu sadržavati vrstu kviza, kategoriju ili grad, broj točnih odgovora, ukupan broj pitanja, postotak uspješnosti i vrijeme igranja kada se ono mjeri.</p>
+<p>PatriaSoul može ukloniti ili poništiti rezultat ako postoje opravdani tehnički razlozi ili utvrđena zlouporaba sustava, u skladu s Pravilnikom o igranju.</p>
+
+<h2>5. Sadržaj pitanja</h2>
+<p>Pitanja služe obrazovanju i provjeri znanja. Baza pitanja može se mijenjati radi ispravaka, ažuriranja i poboljšanja kvalitete. Ako se utvrdi pogreška, pitanje se može ispraviti, zamijeniti ili privremeno ukloniti.</p>
+
+<h2>6. Dnevni kviz i Brani svoj grad</h2>
+<p>Dnevni kviz i Brani svoj grad imaju posebna pravila opisana u Pravilniku o igranju. Dnevni kviz koristi dnevni skup pitanja, dok Brani svoj grad koristi zasebne skupove pitanja za pojedine gradove.</p>
+
+<h2>7. Izmjene pravila</h2>
+<p>PatriaSoul može ažurirati ove Uvjete kada se promijene funkcionalnosti, sigurnosni zahtjevi ili način rada aplikacije. Važeća verzija uvijek se objavljuje na ovoj stranici.</p>
+
+<h2>8. Privatnost</h2>
+<p>Način obrade osobnih i tehničkih podataka opisan je u <a href="./privacy.html">Politici privatnosti</a>. Korištenjem funkcija računa korisnik prihvaća da se podaci potrebni za rad tih funkcija obrađuju u skladu s objavljenim informacijama.</p>
+
+<h2>9. Kontakt i prijava problema</h2>
+<p>Za pitanja o pravilima, prijavu pogreške u pitanju ili prijavu tehničkog problema korisnik može koristiti službeni kontakt kanal PatriaSoul projekta.</p>
+
+<div class="callout"><strong>Važno:</strong> Ovi Uvjeti uređuju korištenje aplikacije, dok detaljna pravila pojedinih načina igre ostaju u <a href="./">Pravilniku o igranju kvizova</a>.</div>
+</article>
+</main>
+<footer class="footer"><span>© 2026 PatriaSoul. Sva prava pridržana.</span><span>Hrvatska · Povijest · Znanje · Identitet</span></footer>
+</body>
+</html>
