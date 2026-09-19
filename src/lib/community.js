@@ -1,12 +1,46 @@
 import { supabase } from "./supabase";
 
-export async function getCommunityComments() {
-  const { data, error } = await supabase
+export async function getCommunityComments(page = 1, pageSize = 20) {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safePageSize = Math.min(50, Math.max(1, Number(pageSize) || 20));
+  const from = (safePage - 1) * safePageSize;
+  const to = from + safePageSize - 1;
+
+  const { data: roots, count, error: rootError } = await supabase
     .from("community_comments")
-    .select("id,user_id,parent_id,content,created_at,updated_at,profiles:profiles!community_comments_user_id_fkey(display_name)")
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return (data || []).map((row) => ({ ...row, display_name: row.profiles?.display_name || "PatriaSoul igrač", profiles: undefined }));
+    .select("id,user_id,parent_id,content,created_at,updated_at,profiles:profiles!community_comments_user_id_fkey(display_name)", { count: "exact" })
+    .is("parent_id", null)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  if (rootError) throw rootError;
+
+  const rootRows = roots || [];
+  const rootIds = rootRows.map((row) => row.id);
+  let replies = [];
+
+  if (rootIds.length) {
+    const { data: replyRows, error: replyError } = await supabase
+      .from("community_comments")
+      .select("id,user_id,parent_id,content,created_at,updated_at,profiles:profiles!community_comments_user_id_fkey(display_name)")
+      .in("parent_id", rootIds)
+      .order("created_at", { ascending: true });
+    if (replyError) throw replyError;
+    replies = replyRows || [];
+  }
+
+  const normalize = (row) => ({
+    ...row,
+    display_name: row.profiles?.display_name || "PatriaSoul igrač",
+    profiles: undefined,
+  });
+
+  return {
+    data: [...rootRows.map(normalize), ...replies.map(normalize)],
+    count: count || 0,
+    page: safePage,
+    pageSize: safePageSize,
+    hasMore: from + rootRows.length < (count || 0),
+  };
 }
 
 export async function getCommunityMembers() {
