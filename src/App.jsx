@@ -11,7 +11,7 @@ import { getMyProfile, saveMyNickname } from "./lib/profile";
 import { getMyProgress } from "./lib/progress";
 import { getAdminDashboardStats, getAdminUsers, getAdminQuizResults, deleteAdminQuizResult } from "./lib/admin";
 import { supabase } from "./lib/supabase";
-import { getCommunityComments, createCommunityComment, deleteCommunityComment, getCommunityMembers } from "./lib/community";
+import { getCommunityComments, createCommunityComment, deleteCommunityComment, getCommunityMembers, createCommunityNotification, getCommunityNotifications, markCommunityNotificationRead } from "./lib/community";
 
 const categories = [
   ["opce", "Hrvatsko opće znanje", "Raznoliko znanje o Hrvatskoj."],
@@ -82,6 +82,8 @@ export default function App() {
   const [communityReplyTo, setCommunityReplyTo] = useState(null);
   const [communityMentionQuery, setCommunityMentionQuery] = useState("");
   const [communityMentionOpen, setCommunityMentionOpen] = useState(false);
+  const [communityNotifications, setCommunityNotifications] = useState([]);
+  const [communityNotificationsOpen, setCommunityNotificationsOpen] = useState(false);
 
   const accountStats = (() => {
     const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
@@ -534,6 +536,8 @@ export default function App() {
     }
   };
 
+  const loadCommunityNotifications = async () => { if (!user) return; try { setCommunityNotifications(await getCommunityNotifications()); } catch (e) { setError(e.message || "Obavijesti se trenutno ne mogu učitati."); } };
+
   const openCommunity = async () => {
     if (!user) {
       requireAuth(openCommunity);
@@ -543,12 +547,10 @@ export default function App() {
     setScreen("community");
     setCommunityLoading(true);
     try {
-      const [comments, members] = await Promise.all([
-        getCommunityComments(),
-        getCommunityMembers(),
-      ]);
+      const [comments, members, notifications] = await Promise.all([getCommunityComments(), getCommunityMembers(), getCommunityNotifications()]);
       setCommunityComments(comments);
       setCommunityMembers(members);
+      setCommunityNotifications(notifications);
     } catch (e) {
       setError(e.message || "Zajednica se trenutno ne može učitati.");
     } finally {
@@ -600,10 +602,22 @@ export default function App() {
     setCommunitySending(true);
     setError("");
     try {
-      await createCommunityComment({
+      const created = await createCommunityComment({ content: clean, parentId: communityReplyTo?.id || null });
+      for (const member of communityMembers) {
+        const name = String(member.display_name || "").trim();
+        if (!name || member.id === user.id) continue;
+        const escaped = name.replace(/[.*+?^\${}()|[\]\\]/g, "\\      await createCommunityComment({
         content: clean,
         parentId: communityReplyTo?.id || null,
       });
+      setCommunityText("");");
+        if (new RegExp("(^|\\s)@" + escaped + "(?=\\s|$|[,.!?])", "i").test(clean)) {
+          await createCommunityNotification({ userId: member.id, commentId: created.id, type: "mention" });
+        }
+      }
+      if (communityReplyTo?.user_id && communityReplyTo.user_id !== user.id) {
+        await createCommunityNotification({ userId: communityReplyTo.user_id, commentId: created.id, type: "reply" });
+      }
       setCommunityText("");
       setCommunityReplyTo(null);
       setCommunityMentionQuery("");
@@ -626,6 +640,8 @@ export default function App() {
     }
   };
 
+  const openCommunityNotification = async (notification) => { await markCommunityNotificationRead(notification.id); setCommunityNotifications((items) => items.filter((item) => item.id !== notification.id)); setCommunityNotificationsOpen(false); setScreen("community"); await refreshCommunity(); window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 0); };
+
   const formatCommunityTime = (value) => {
     const date = new Date(value);
     return date.toLocaleString("hr-HR", {
@@ -637,13 +653,8 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!supabase || !user || screen !== "community") return undefined;
-    const channel = supabase
-      .channel("patriasoul-community-comments")
-      .on("postgres_changes", { event: "*", schema: "public", table: "community_comments" }, () => {
-        refreshCommunity();
-      })
-      .subscribe();
+    if (!supabase || !user) return undefined;
+    const channel = supabase.channel("patriasoul-community-live").on("postgres_changes", { event: "*", schema: "public", table: "community_comments" }, () => { if (screen === "community") refreshCommunity(); }).on("postgres_changes", { event: "INSERT", schema: "public", table: "community_notifications", filter: "user_id=eq." + user.id }, () => { loadCommunityNotifications(); }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
@@ -839,6 +850,7 @@ export default function App() {
           <button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button>
           <button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>
           {user && <button onClick={openCommunity} className="patria-nav-link"><MessageCircle className="h-4 w-4" /> Zajednica</button>}
+          {user && <button onClick={() => { setCommunityNotificationsOpen((v) => !v); loadCommunityNotifications(); }} className="patria-nav-link relative"><span className="relative"><AtSign className="h-4 w-4" />{communityNotifications.length > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{communityNotifications.length > 9 ? "9+" : communityNotifications.length}</span>}</span> Obavijesti</button>}
           {user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> {accountDisplayName}</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Prijava</button>}
         </nav>
 
@@ -1221,6 +1233,8 @@ export default function App() {
         </section>
       </>}
     </main>}
+
+    {communityNotificationsOpen && user && <div className="fixed right-4 top-20 z-[60] w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-accent/25 bg-card shadow-2xl"><div className="flex items-center justify-between border-b border-border bg-primary/80 px-4 py-3"><div><p className="text-sm font-bold">Obavijesti</p><p className="text-xs text-muted-foreground">{communityNotifications.length ? "Netko te je spomenuo ili ti odgovorio." : "Nema novih obavijesti."}</p></div><button type="button" onClick={() => setCommunityNotificationsOpen(false)} className="text-xs font-bold text-accent">Zatvori</button></div><div className="max-h-[60vh] overflow-y-auto">{communityNotifications.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">Sve je pročitano. 👌</div> : communityNotifications.map((notification) => <button key={notification.id} type="button" onClick={() => openCommunityNotification(notification)} className="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5"><div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent"><AtSign className="h-4 w-4" /></span><div><p className="text-sm"><strong>{notification.actor_name}</strong> {notification.type === "reply" ? "ti je odgovorio/la." : "te je spomenuo/la."}</p><p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.comment_text}</p></div></div></button>)}</div></div>}
 
     {screen === "community" && <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
