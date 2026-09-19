@@ -1102,15 +1102,99 @@ export default function App() {
       {loadingLeaderboard ? <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam rang-listu...</div> : leaderboard.length === 0 ? <div className="patria-card p-10 text-center"><Medal className="mx-auto h-10 w-10 text-accent" /><h2 className="mt-4 text-2xl font-bold">Još nema rezultata</h2><p className="mt-2 text-muted-foreground">Prvi spremljeni rezultati pojavit će se ovdje.</p></div> : <div className="overflow-hidden rounded-xl border border-border bg-card"><div className="grid grid-cols-[48px_1fr_90px_110px] gap-3 border-b border-border bg-secondary/60 px-4 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground"><span>#</span><span>Igrač</span><span>Najbolje</span><span>Odigrano</span></div>{leaderboard.map((player, index) => <div key={`${player.display_name}-${index}`} className="grid grid-cols-[48px_1fr_90px_110px] items-center gap-3 border-b border-border px-4 py-4 last:border-0"><span className="font-bold text-muted-foreground">{index + 1}</span><div><p className="font-semibold">{player.display_name}</p><p className="text-xs text-muted-foreground">Prosjek {Number(player.average_percentage).toFixed(1)}%</p></div><span className="font-bold text-accent">{Number(player.best_percentage).toFixed(0)}%</span><span className="text-sm">{player.quizzes_played}</span></div>)}</div>}
     </main>}
 
-    <footer className="patria-footer"><div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12"><div className="grid gap-8 md:grid-cols-[1.3fr_1fr_1fr]"><div><div className="flex items-center gap-3"><span className="patria-brand-mark flex items-center"><img src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" alt="PatriaSoul" className="h-12 w-auto object-contain" /></span></div><p className="mt-5 max-w-md text-sm text-white/55">Hrvatska · povijest · znanje · identitet. Prostor za učenje, igru i čuvanje priča koje čine naše nasljeđe.</p></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">Brzi pristup</p><div className="mt-4 grid gap-2 text-sm text-white/70"><button onClick={home} className="text-left hover:text-white">Početna</button><button onClick={openCroatianQuiz} className="text-left hover:text-white">Hrvatski kviz</button><button onClick={openCities} className="text-left hover:text-white">Brani svoj grad</button><button onClick={() => openLeaderboard()} className="text-left hover:text-white">Rang-lista</button></div></div><div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">PatriaSoul</p><p className="mt-4 max-w-xs text-sm text-white/60">Prati PatriaSoul na TikToku i budi uz nas dok kroz kratke priče, zanimljivosti i kvizove upoznajemo Hrvatsku.</p>
-<a href="https://www.tiktok.com/@patriasoul" target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/15">
-  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M16.6 3c.3 1.8 1.3 3.1 3.4 3.5v3.1c-1.5-.1-2.8-.6-4-1.5v6.4c0 4.1-2.8 6.5-6.3 6.5-3.3 0-5.7-2.2-5.7-5.3 0-3.4 2.7-5.7 6.3-5.7.3 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.5 0-2.9.9-2.9 2.5 0 1.4 1 2.4 2.4 2.4 1.8 0 2.8-1.3 2.8-3.6V3h4z"/></svg>
-  Prati nas na TikToku
-</a>
-<p className="mt-7 max-w-xs text-sm leading-6 text-white/70">Vjera, nada i istina kroz priču o Yeshui — Isusu Kristu. Sadržaj za one koji žele upoznati Njegovu riječ, život i poruku te dublje promišljati o vjeri.</p>
-<a href="https://www.tiktok.com/@hajdi331?lang=hr" target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/15">
-  <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current"><path d="M16.6 3c.3 1.8 1.3 3.1 3.4 3.5v3.1c-1.5-.1-2.8-.6-4-1.5v6.4c0 4.1-2.8 6.5-6.3 6.5-3.3 0-5.7-2.2-5.7-5.3 0-3.4 2.7-5.7 6.3-5.7.3 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.5 0-2.9.9-2.9 2.5 0 1.4 1 2.4 2.4 2.4 1.8 0 2.8-1.3 2.8-3.6V3h4z"/></svg>
-  Prati vjerski kanal na TikToku
-</a><div className="mt-5 grid gap-2 text-sm text-white/70"><button onClick={() => setScreen("rules")} className="text-left hover:text-white">Pravilnik o igranju</button><a href="/kviz/terms.html" className="text-left hover:text-white">Uvjeti korištenja</a><a href="/kviz/privacy.html" className="text-left hover:text-white">Politika privatnosti</a><button onClick={openAccount} className="text-left hover:text-white">{user ? "Moj račun" : "Prijava"}</button></div><p className="mt-5 font-display text-lg italic text-white/75">„Znanje čuva ono što pamtimo.”</p></div></div><div className="patria-divider mt-9" /><div className="flex flex-col gap-2 pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between"><span>© 2026 PatriaSoul. Sva prava pridržana.</span><span>Hrvatska · Povijest · Znanje · Identitet</span></div></div></footer>
+    <footer className="patria-footer">
+      <div className="patria-footer-glow" aria-hidden="true" />
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-14">
+        <div className="grid gap-10 lg:grid-cols-[1.2fr_.8fr_1.45fr]">
+          <div className="patria-footer-brand">
+            <div className="patria-footer-logo-wrap">
+              <img
+                src="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png"
+                alt="PatriaSoul"
+                className="patria-footer-logo"
+              />
+            </div>
+            <p className="mt-5 max-w-md text-sm leading-7 text-white/65">
+              Hrvatska · povijest · znanje · identitet.
+              <br />
+              Prostor za učenje, igru i čuvanje priča koje čine naše nasljeđe.
+            </p>
+            <div className="patria-footer-motto">
+              <span>Znanje</span>
+              <span>·</span>
+              <span>Ponos</span>
+              <span>·</span>
+              <span>Nasljeđe</span>
+            </div>
+          </div>
+
+          <div>
+            <p className="patria-footer-heading">PatriaSoul</p>
+            <div className="mt-4 grid gap-2.5 text-sm">
+              <button onClick={home} className="patria-footer-link">Početna</button>
+              <button onClick={openCroatianQuiz} className="patria-footer-link">Hrvatski kviz</button>
+              <button onClick={openCities} className="patria-footer-link">Brani svoj grad</button>
+              <button onClick={openDaily} className="patria-footer-link">Dnevni kviz</button>
+              <button onClick={() => openLeaderboard()} className="patria-footer-link">Rang-lista</button>
+              <button onClick={openAccount} className="patria-footer-link">{user ? "Moj račun" : "Prijava"}</button>
+            </div>
+          </div>
+
+          <div>
+            <p className="patria-footer-heading">Prati nas</p>
+
+            <div className="patria-social-card">
+              <div className="patria-social-copy">
+                <span className="patria-social-label">PatriaSoul</span>
+                <p>Prati PatriaSoul na TikToku i budi uz nas dok kroz kratke priče, zanimljivosti i kvizove upoznajemo Hrvatsku.</p>
+              </div>
+              <a
+                href="https://www.tiktok.com/@patriasoul"
+                target="_blank"
+                rel="noreferrer"
+                className="patria-social-button"
+                aria-label="Prati PatriaSoul na TikToku"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                  <path d="M16.6 3c.3 1.8 1.3 3.1 3.4 3.5v3.1c-1.5-.1-2.8-.6-4-1.5v6.4c0 4.1-2.8 6.5-6.3 6.5-3.3 0-5.7-2.2-5.7-5.3 0-3.4 2.7-5.7 6.3-5.7.3 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.5 0-2.9.9-2.9 2.5 0 1.4 1 2.4 2.4 2.4 1.8 0 2.8-1.3 2.8-3.6V3h4z"/>
+                </svg>
+                <span>Prati nas</span>
+              </a>
+            </div>
+
+            <div className="patria-social-card patria-social-card-faith">
+              <div className="patria-social-copy">
+                <span className="patria-social-label">Vjera · Yeshua</span>
+                <p>Vjera, nada i istina kroz priču o Yeshui — Isusu Kristu. Sadržaj za one koji žele upoznati Njegovu riječ, život i poruku.</p>
+              </div>
+              <a
+                href="https://www.tiktok.com/@hajdi331?lang=hr"
+                target="_blank"
+                rel="noreferrer"
+                className="patria-social-button"
+                aria-label="Prati vjerski kanal na TikToku"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                  <path d="M16.6 3c.3 1.8 1.3 3.1 3.4 3.5v3.1c-1.5-.1-2.8-.6-4-1.5v6.4c0 4.1-2.8 6.5-6.3 6.5-3.3 0-5.7-2.2-5.7-5.3 0-3.4 2.7-5.7 6.3-5.7.3 0 .7 0 1 .1v3.2c-.3-.1-.6-.2-1-.2-1.5 0-2.9.9-2.9 2.5 0 1.4 1 2.4 2.4 2.4 1.8 0 2.8-1.3 2.8-3.6V3h4z"/>
+                </svg>
+                <span>Prati vjerski kanal</span>
+              </a>
+            </div>
+
+            <div className="patria-footer-legal">
+              <button onClick={() => setScreen("rules")} className="patria-footer-link">Pravilnik o igranju</button>
+              <a href="/kviz/terms.html" className="patria-footer-link">Uvjeti korištenja</a>
+              <a href="/kviz/privacy.html" className="patria-footer-link">Politika privatnosti</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="patria-divider mt-10" />
+        <div className="flex flex-col gap-3 pt-5 text-xs text-white/45 sm:flex-row sm:items-center sm:justify-between">
+          <span>© 2026 PatriaSoul. Sva prava pridržana.</span>
+          <span>Hrvatska · Povijest · Znanje · Identitet</span>
+        </div>
+      </div>
+    </footer>
   </div>;
 }
