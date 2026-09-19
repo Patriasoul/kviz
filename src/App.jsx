@@ -657,7 +657,7 @@ export default function App() {
           <button onClick={openCities} className="patria-nav-link"><MapPin className="h-4 w-4" /> Brani svoj grad</button>
           <button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button>
           <button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>
-          {user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> Moj račun</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Moj račun</button>}
+          {user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> {accountDisplayName}</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Prijava</button>}
         </nav>
 
         <details className="patria-mobile-menu">
@@ -668,7 +668,7 @@ export default function App() {
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCities(); }} className="patria-mobile-nav-link"><MapPin className="h-5 w-5" /><span>Brani svoj grad</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openDaily(); }} className="patria-mobile-nav-link">📅 <span>Dnevni kviz</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openLeaderboard(); }} className="patria-mobile-nav-link"><Medal className="h-5 w-5" /><span>Rang-lista</span></button>
-          {user ? <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openAccount(); }} className="patria-mobile-nav-link"><UserRound className="h-5 w-5" /><span>Moj račun</span></button> : <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); signIn(); }} className="patria-mobile-nav-link"><LogIn className="h-5 w-5" /><span>Moj račun</span></button>}
+          {user ? <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openAccount(); }} className="patria-mobile-nav-link"><UserRound className="h-5 w-5" /><span>{accountDisplayName}</span></button> : <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); signIn(); }} className="patria-mobile-nav-link"><LogIn className="h-5 w-5" /><span>Prijava</span></button>}
         </nav>
       </details>
       </div>
@@ -781,7 +781,7 @@ export default function App() {
           <span className="rounded-full border border-border bg-card px-3 py-1.5">10 kategorija</span>
           <span className="rounded-full border border-border bg-card px-3 py-1.5">10 pitanja po rundi</span>
         </div>
-        {user && <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm"><UserRound className="h-4 w-4 text-accent" /> Prijavljen korisnik</div>}
+        {user && <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm"><UserRound className="h-4 w-4 text-accent" /> <strong>{accountDisplayName}</strong><span className="text-muted-foreground">je prijavljen</span></div>}
       </div></div></section>
 
 <section id="nasljede" className="patria-section-dark border-b border-white/10"><div className="mx-auto max-w-6xl px-4 py-12 sm:px-6"><div className="mb-7"><p className="text-xs font-bold uppercase tracking-[.2em] text-[#f1d078]">Zašto PatriaSoul?</p><h2 className="mt-2 text-3xl text-white sm:text-4xl">Testiraj. Čuvaj. Nauči. Prenesi.</h2></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-feature text-left"><span className="patria-icon-ring"><BookOpen className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">TESTIRAJ SVOJE ZNANJE</h3><p className="mt-2 text-sm text-white/60">Provjeri koliko znaš o Hrvatskoj i njezinoj povijesti.</p></button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-feature text-left"><span className="patria-icon-ring"><ShieldCheck className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">ČUVAJ NASLJEĐE</h3><p className="mt-2 text-sm text-white/60">Upoznaj priče, mjesta, običaje i vrijednosti koje vrijedi sačuvati.</p></button><button onClick={() => startMainCategory(categories.find(([id]) => id === "povijest"))} className="patria-feature text-left"><span className="patria-icon-ring"><FileText className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">NAUČI ŠTO JE I KAKO JE BILO</h3><p className="mt-2 text-sm text-white/60">Povijest nam pomaže razumjeti Hrvatsku danas.</p></button><button onClick={openCities} className="patria-feature text-left"><span className="patria-icon-ring"><MapPin className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">BUDI DIO PRIČE</h3><p className="mt-2 text-sm text-white/60">Istražuj gradove, upoznaj Hrvatsku i ostavi svoj rezultat.</p></button></div></div></section>
