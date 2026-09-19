@@ -1003,7 +1003,26 @@ export default function App() {
 
 <section id="nasljede" className="patria-section-dark border-b border-white/10"><div className="mx-auto max-w-6xl px-4 py-12 sm:px-6"><div className="mb-7"><p className="text-xs font-bold uppercase tracking-[.2em] text-[#f1d078]">Zašto PatriaSoul?</p><h2 className="mt-2 text-3xl text-white sm:text-4xl">Testiraj. Čuvaj. Nauči. Prenesi.</h2></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-feature text-left"><span className="patria-icon-ring"><BookOpen className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">TESTIRAJ SVOJE ZNANJE</h3><p className="mt-2 text-sm text-white/60">Provjeri koliko znaš o Hrvatskoj i njezinoj povijesti.</p></button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-feature text-left"><span className="patria-icon-ring"><ShieldCheck className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">ČUVAJ NASLJEĐE</h3><p className="mt-2 text-sm text-white/60">Upoznaj priče, mjesta, običaje i vrijednosti koje vrijedi sačuvati.</p></button><button onClick={() => startMainCategory(categories.find(([id]) => id === "povijest"))} className="patria-feature text-left"><span className="patria-icon-ring"><FileText className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">NAUČI ŠTO JE I KAKO JE BILO</h3><p className="mt-2 text-sm text-white/60">Povijest nam pomaže razumjeti Hrvatsku danas.</p></button><button onClick={openCities} className="patria-feature text-left"><span className="patria-icon-ring"><MapPin className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">BUDI DIO PRIČE</h3><p className="mt-2 text-sm text-white/60">Istražuj gradove, upoznaj Hrvatsku i ostavi svoj rezultat.</p></button></div></div></section>
 
-      <section id="kategorije" className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20"><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">10 područja</p><h2 className="patria-accent-line mt-2 text-3xl">Odaberi kategoriju</h2>
+      <section className="border-y border-border bg-background">
+  <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-14">
+    <div className="grid gap-4 md:grid-cols-2">
+      <article className="patria-feature">
+        <span className="text-xs font-bold uppercase tracking-[.18em] text-accent">O PatriaSoul</span>
+        <h2 className="mt-2 text-2xl text-white">Zašto postoji PatriaSoul?</h2>
+        <p className="mt-3 text-sm leading-7 text-white/65">PatriaSoul je prostor za upoznavanje Hrvatske kroz povijest, znanje, baštinu, gradove i priče koje vrijedi sačuvati i prenijeti dalje.</p>
+        <a href="./about.html" className="patria-button mt-5">Pročitaj više <ArrowRight className="ml-2 h-4 w-4" /></a>
+      </article>
+      <article className="patria-feature">
+        <span className="text-xs font-bold uppercase tracking-[.18em] text-accent">Kontakt</span>
+        <h2 className="mt-2 text-2xl text-white">Želiš nam se javiti?</h2>
+        <p className="mt-3 text-sm leading-7 text-white/65">Za pitanja, prijedloge, prijavu pogreške ili poruku vezanu uz PatriaSoul pogledaj kontakt stranicu.</p>
+        <a href="./contact.html" className="patria-button mt-5">Otvori kontakt <ArrowRight className="ml-2 h-4 w-4" /></a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="kategorije" className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-20"><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">10 područja</p><h2 className="patria-accent-line mt-2 text-3xl">Odaberi kategoriju</h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{categories.map(([id, title, desc], i) => <button key={id} disabled={loadingQuiz} onClick={() => startMainCategory([id, title, desc])} className="patria-card group p-5 text-left disabled:opacity-60"><div className="flex items-start justify-between gap-4"><span className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-sm font-bold text-primary">{String(i + 1).padStart(2, "0")}</span><ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" /></div><h3 className="mt-5 text-xl">{title}</h3><p className="mt-2 text-sm text-muted-foreground">{desc}</p><p className="mt-4 text-xs font-semibold text-accent">Pokreni 10 pitanja →</p></button>)}</div>
         {error && <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
         {loadingQuiz && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"><div className="rounded-xl bg-card px-6 py-5 shadow-xl"><div className="flex items-center gap-3"><Loader2 className="h-5 w-5 animate-spin" /> Učitavam pitanja...</div></div></div>}
@@ -1467,6 +1486,8 @@ export default function App() {
               <a href="./rules.html" className="patria-footer-link">Pravilnik o igranju</a>
               <a href="./terms.html" className="patria-footer-link">Uvjeti korištenja</a>
               <a href="./privacy.html" className="patria-footer-link">Politika privatnosti</a>
+              <a href="./about.html" className="patria-footer-link">O PatriaSoul</a>
+              <a href="./contact.html" className="patria-footer-link">Kontakt</a>
             </div>
           </div>
         </div>
