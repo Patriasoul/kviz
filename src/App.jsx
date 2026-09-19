@@ -77,6 +77,9 @@ export default function App() {
   const [communityComments, setCommunityComments] = useState([]);
   const [communityMembers, setCommunityMembers] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(false);
+  const [communityLoadingMore, setCommunityLoadingMore] = useState(false);
+  const [communityPage, setCommunityPage] = useState(1);
+  const [communityHasMore, setCommunityHasMore] = useState(false);
   const [communitySending, setCommunitySending] = useState(false);
   const [communityText, setCommunityText] = useState("");
   const [communityReplyTo, setCommunityReplyTo] = useState(null);
@@ -546,15 +549,35 @@ export default function App() {
     setError("");
     setScreen("community");
     setCommunityLoading(true);
+    setCommunityPage(1);
+    setCommunityHasMore(false);
     try {
-      const [comments, members, notifications] = await Promise.all([getCommunityComments(), getCommunityMembers(), getCommunityNotifications()]);
-      setCommunityComments(comments);
+      const [commentsPage, members, notifications] = await Promise.all([getCommunityComments(1, 20), getCommunityMembers(), getCommunityNotifications()]);
+      setCommunityComments(commentsPage.data);
+      setCommunityPage(1);
+      setCommunityHasMore(commentsPage.hasMore);
       setCommunityMembers(members);
       setCommunityNotifications(notifications);
     } catch (e) {
       setError(e.message || "Zajednica se trenutno ne može učitati.");
     } finally {
       setCommunityLoading(false);
+    }
+  };
+
+  const loadMoreCommunityComments = async () => {
+    if (!user || communityLoadingMore || !communityHasMore) return;
+    const nextPage = communityPage + 1;
+    setCommunityLoadingMore(true);
+    try {
+      const commentsPage = await getCommunityComments(nextPage, 20);
+      setCommunityComments((current) => [...current, ...commentsPage.data]);
+      setCommunityPage(nextPage);
+      setCommunityHasMore(commentsPage.hasMore);
+    } catch (e) {
+      setError(e.message || "Još komentara se trenutno ne može učitati.");
+    } finally {
+      setCommunityLoadingMore(false);
     }
   };
 
@@ -1335,7 +1358,18 @@ export default function App() {
               </div>
             </article>;
           })}
-        </section>}
+        </section>
+        {communityHasMore && <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            onClick={loadMoreCommunityComments}
+            disabled={communityLoadingMore}
+            className="patria-button min-w-48 justify-center"
+          >
+            {communityLoadingMore ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {communityLoadingMore ? "Učitavam..." : "Učitaj još komentara"}
+          </button>
+        </div>}
     </main>}
 
     {screen === "leaderboard" && <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16"><div className="mb-8 flex items-center justify-between gap-4"><div><p className="text-sm font-bold uppercase tracking-[.16em] text-accent">PatriaSoul</p><h1 className="mt-2 font-display text-4xl font-bold">Rang-lista</h1><p className="mt-2 text-muted-foreground">Rezultati igrača koji su svoje rezultate spremili u PatriaSoul.</p></div><button onClick={home} className="patria-button"><ArrowLeft className="mr-2 h-4 w-4" /> Natrag</button></div>
