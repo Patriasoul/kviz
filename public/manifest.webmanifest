@@ -1,8 +1,8 @@
 {
   "name": "PatriaSoul — Hrvatski kviz",
   "short_name": "PatriaSoul",
-  "description": "Hrvatski kviz, Brani svoj grad i Dnevni kviz.",
-  "lang": "hr",
+  "description": "Hrvatski kviz znanja — povijest, baština, Domovinski rat, geografija, kultura i Brani svoj grad.",
+  "lang": "hr-HR",
   "start_url": "/kviz/",
   "scope": "/kviz/",
   "display": "standalone",
