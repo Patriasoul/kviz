@@ -606,11 +606,7 @@ export default function App() {
       for (const member of communityMembers) {
         const name = String(member.display_name || "").trim();
         if (!name || member.id === user.id) continue;
-        const escaped = name.replace(/[.*+?^\${}()|[\]\\]/g, "\\      await createCommunityComment({
-        content: clean,
-        parentId: communityReplyTo?.id || null,
-      });
-      setCommunityText("");");
+        const escaped = name.replace(/[.*+?^\${}()|[\]\\]/g, "\\$&");
         if (new RegExp("(^|\\s)@" + escaped + "(?=\\s|$|[,.!?])", "i").test(clean)) {
           await createCommunityNotification({ userId: member.id, commentId: created.id, type: "mention" });
         }
