@@ -664,13 +664,19 @@ export default function App() {
 
     window.history.replaceState({}, "", window.location.pathname);
 
-    if (mode === "croatian" || user) {
+    if (mode === "croatian") {
       handleDeepLink(mode);
       return;
     }
 
-    setPendingDeepLink(mode);
-    signIn();
+    supabase?.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        handleDeepLink(mode);
+        return;
+      }
+      setPendingDeepLink(mode);
+      signIn();
+    });
   }, []);
 
   useEffect(() => {
