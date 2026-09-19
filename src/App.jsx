@@ -72,6 +72,7 @@ export default function App() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminResults, setAdminResults] = useState([]);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
+  const [pendingDeepLink, setPendingDeepLink] = useState(null);
 
   const accountStats = (() => {
     const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
@@ -599,6 +600,20 @@ export default function App() {
     }, 0);
   };
 
+  const handleDeepLink = (mode) => {
+    if (mode === "croatian") {
+      openCroatianQuiz();
+      return;
+    }
+    if (mode === "city" || mode === "cities") {
+      openCities();
+      return;
+    }
+    if (mode === "daily") {
+      openDaily();
+    }
+  };
+
   const home = () => {
     setScreen("home");
     setRound([]);
@@ -642,6 +657,28 @@ export default function App() {
   useEffect(() => {
     if (screen === "quiz") window.scrollTo({ top: 0, behavior: "smooth" });
   }, [screen]);
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    if (!mode || !["croatian", "city", "cities", "daily"].includes(mode)) return;
+
+    window.history.replaceState({}, "", window.location.pathname);
+
+    if (mode === "croatian" || user) {
+      handleDeepLink(mode);
+      return;
+    }
+
+    setPendingDeepLink(mode);
+    signIn();
+  }, []);
+
+  useEffect(() => {
+    if (!user || !pendingDeepLink) return;
+    const mode = pendingDeepLink;
+    setPendingDeepLink(null);
+    handleDeepLink(mode);
+  }, [user, pendingDeepLink]);
 
   const activeCategoryTitle = categories.find(([id]) => id === activeCategory)?.[1] ?? "Hrvatski kviz";
   const quizTitle = activeQuizType === "city"
