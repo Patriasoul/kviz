@@ -1,0 +1,52 @@
+/* PatriaSoul — tri slikovna mjesta za glavne igre.
+   Zamijeni datoteke u public/images/ istim imenima kada želiš svoje fotografije. */
+.patria-game-card:nth-child(1) {
+  background-image:
+    linear-gradient(180deg, rgba(4,14,27,.24) 0%, rgba(4,14,27,.76) 58%, rgba(4,14,27,.98) 100%),
+    url("./images/game-hrvatski.svg");
+  background-size: cover;
+  background-position: center;
+}
+
+.patria-game-card:nth-child(2) {
+  background-image:
+    linear-gradient(180deg, rgba(4,14,27,.24) 0%, rgba(4,14,27,.76) 58%, rgba(4,14,27,.98) 100%),
+    url("./images/game-grad.svg");
+  background-size: cover;
+  background-position: center;
+}
+
+.patria-game-card:nth-child(3) {
+  background-image:
+    linear-gradient(180deg, rgba(4,14,27,.24) 0%, rgba(4,14,27,.76) 58%, rgba(4,14,27,.98) 100%),
+    url("./images/game-dnevni.svg");
+  background-size: cover;
+  background-position: center;
+}
+
+.patria-game-card::after {
+  content: "";
+  display: block;
+  height: 145px;
+  margin: -1.5rem -1.5rem 1.15rem;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  pointer-events: none;
+}
+
+.patria-game-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.patria-game-card:hover:nth-child(1),
+.patria-game-card:hover:nth-child(2),
+.patria-game-card:hover:nth-child(3) {
+  background-position: center;
+  filter: brightness(1.06);
+}
+
+@media (max-width: 640px) {
+  .patria-game-card::after {
+    height: 115px;
+  }
+}
