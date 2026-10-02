@@ -74,6 +74,7 @@ export default function App() {
   const [adminResults, setAdminResults] = useState([]);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [pendingDeepLink, setPendingDeepLink] = useState(null);
+  const [pendingCategory, setPendingCategory] = useState(null);
   const [communityComments, setCommunityComments] = useState([]);
   const [communityMembers, setCommunityMembers] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(false);
@@ -722,7 +723,8 @@ export default function App() {
 
   const startMainCategory = async (category) => {
     if (!user) {
-      requireAuth(() => startMainCategory(category));
+      setPendingCategory(category);
+      requireAuth(() => {});
       return;
     }
     setError("");
@@ -845,11 +847,19 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user || !pendingDeepLink) return;
-    const mode = pendingDeepLink;
-    setPendingDeepLink(null);
-    handleDeepLink(mode);
-  }, [user, pendingDeepLink]);
+    if (!user) return;
+    if (pendingCategory) {
+      const category = pendingCategory;
+      setPendingCategory(null);
+      startMainCategory(category);
+      return;
+    }
+    if (pendingDeepLink) {
+      const mode = pendingDeepLink;
+      setPendingDeepLink(null);
+      handleDeepLink(mode);
+    }
+  }, [user, pendingCategory, pendingDeepLink]);
 
   const activeCategoryTitle = categories.find(([id]) => id === activeCategory)?.[1] ?? "Hrvatski kviz";
   const quizTitle = activeQuizType === "city"
