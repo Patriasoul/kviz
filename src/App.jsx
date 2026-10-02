@@ -752,6 +752,7 @@ export default function App() {
 
   const openCroatianQuiz = () => {
     setScreen("home");
+    window.history.replaceState({}, "", window.location.pathname + "#kategorije");
     setError("");
     setRound([]);
     setResult(null);
@@ -834,7 +835,7 @@ export default function App() {
     const mode = new URLSearchParams(window.location.search).get("mode");
     if (!mode || !["croatian", "city", "cities", "daily", "leaderboard", "account"].includes(mode)) return;
 
-    window.history.replaceState({}, "", window.location.pathname);
+    window.history.replaceState({}, "", window.location.pathname + window.location.hash);
 
     if (mode === "croatian") {
       handleDeepLink(mode);
@@ -850,6 +851,21 @@ export default function App() {
       signIn();
     });
   }, []);
+
+  useEffect(() => {
+    const scrollToCategories = () => {
+      if (window.location.hash !== "#kategorije") return;
+      window.setTimeout(() => {
+        document.getElementById("kategorije")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    };
+    scrollToCategories();
+    window.addEventListener("hashchange", scrollToCategories);
+    return () => window.removeEventListener("hashchange", scrollToCategories);
+  }, [screen]);
 
   useEffect(() => {
     if (!user) return;
