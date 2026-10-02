@@ -75,6 +75,7 @@ export default function App() {
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [pendingDeepLink, setPendingDeepLink] = useState(null);
   const pendingCategoryRef = useRef(null);
+  const pendingCategoryStorageKey = "patriasoul_pending_category_v2";
   const [communityComments, setCommunityComments] = useState([]);
   const [communityMembers, setCommunityMembers] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(false);
@@ -146,15 +147,7 @@ export default function App() {
 
       if (authEvent === "SIGNED_IN") {
         setAuthOpen(false);
-        const pending = pendingCategoryRef.current;
-        if (pending?.type === "category" && pending.category) {
-          pendingCategoryRef.current = null;
-          setScreen("home");
-          window.setTimeout(() => startMainCategory(pending.category, currentUser), 0);
-        } else {
-          setScreen("account");
-          setAccountPage(1);
-        }
+        setScreen("home");
       }
 
       try {
@@ -731,7 +724,11 @@ export default function App() {
   const startMainCategory = async (category, authenticatedUser = null) => {
     const currentUser = authenticatedUser || user;
     if (!currentUser) {
-      pendingCategoryRef.current = { type: "category", category };
+      const pending = { type: "category", category };
+      pendingCategoryRef.current = pending;
+      try {
+        sessionStorage.setItem(pendingCategoryStorageKey, JSON.stringify(pending));
+      } catch {}
       requireAuth(() => {});
       return;
     }
@@ -856,6 +853,22 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
+
+    let pending = pendingCategoryRef.current;
+    if (!pending?.category) {
+      try {
+        const stored = sessionStorage.getItem(pendingCategoryStorageKey);
+        if (stored) pending = JSON.parse(stored);
+      } catch {}
+    }
+
+    if (pending?.type === "category" && Array.isArray(pending.category)) {
+      pendingCategoryRef.current = null;
+      try { sessionStorage.removeItem(pendingCategoryStorageKey); } catch {}
+      window.setTimeout(() => startMainCategory(pending.category, user), 0);
+      return;
+    }
+
     if (pendingDeepLink) {
       const mode = pendingDeepLink;
       setPendingDeepLink(null);
