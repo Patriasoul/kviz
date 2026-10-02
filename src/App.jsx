@@ -722,14 +722,33 @@ export default function App() {
   };
 
   const startMainCategory = async (category, authenticatedUser = null) => {
-    const currentUser = authenticatedUser || user;
+    let currentUser = authenticatedUser || user;
+
+    // Uvijek provjeri stvarnu Supabase sesiju prije pokretanja kategorije.
+    // Tako klik na kategoriju ne ovisi o tome je li React već osvježio user state.
+    if (!currentUser && supabase) {
+      try {
+        const { data } = await supabase.auth.getUser();
+        currentUser = data?.user || null;
+        if (currentUser) setUser(currentUser);
+      } catch {}
+    }
+
     if (!currentUser) {
       const pending = { type: "category", category };
       pendingCategoryRef.current = pending;
       try {
         localStorage.setItem(pendingCategoryStorageKey, JSON.stringify(pending));
       } catch {}
-      requireAuth(() => {});
+      setAuthMode("login");
+      setAuthRulesAccepted(false);
+      setAuthName("");
+      setAuthUsername("");
+      setAuthEmail("");
+      setAuthPassword("");
+      setAuthPasswordConfirm("");
+      setError("");
+      setAuthOpen(true);
       return;
     }
     setError("");
