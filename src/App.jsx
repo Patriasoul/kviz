@@ -137,36 +137,87 @@ export default function App() {
   useEffect(() => {
     if (!supabase) return undefined;
 
-    const loadProfile = async (currentUser, authEvent = null) => {
-      setUser(currentUser ?? null);
-      if (!currentUser) {
-        setProfile(null);
-        setNicknameOpen(false);
-        return;
-      }
+    let mounted = true;
+    let subscription = null;
 
-      if (authEvent === "SIGNED_IN") {
-        setAuthOpen(false);
-        setScreen("home");
-      }
-
+    // Supabase preporučuje da se inicijalna sesija učita prije
+    // registracije auth listenera. Time izbjegavamo race/deadlock
+    // između getUser() i onAuthStateChange() tijekom inicijalizacije.
+    const loadInitialAuth = async () => {
       try {
-        const currentProfile = await getMyProfile();
-        setProfile(currentProfile);
-        if (!currentProfile?.display_name?.trim()) {
-          setNickname("");
-          setNicknameOpen(true);
+        const { data } = await supabase.auth.getUser();
+        if (!mounted) return;
+
+        const currentUser = data?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          try {
+            const currentProfile = await getMyProfile();
+            if (!mounted) return;
+            setProfile(currentProfile);
+            if (!currentProfile?.display_name?.trim()) {
+              setNickname("");
+              setNicknameOpen(true);
+            }
+          } catch (profileError) {
+            if (mounted) setError(profileError.message || "Profil se nije mogao učitati.");
+          }
+        } else {
+          setProfile(null);
+          setNicknameOpen(false);
         }
-      } catch (profileError) {
-        setError(profileError.message || "Profil se nije mogao učitati.");
+      } catch (authError) {
+        if (mounted) setError(authError.message || "Prijava se trenutno ne može provjeriti.");
       }
+
+      if (!mounted) return;
+
+      const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (!mounted) return;
+
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        // Ne pozivamo druge Supabase API-je unutar auth callbacka.
+        // Profil učitavamo nakon što callback završi.
+        window.setTimeout(async () => {
+          if (!mounted) return;
+
+          if (!currentUser) {
+            setProfile(null);
+            setNicknameOpen(false);
+            return;
+          }
+
+          if (event === "SIGNED_IN") {
+            setAuthOpen(false);
+            setScreen("home");
+          }
+
+          try {
+            const currentProfile = await getMyProfile();
+            if (!mounted) return;
+            setProfile(currentProfile);
+            if (!currentProfile?.display_name?.trim()) {
+              setNickname("");
+              setNicknameOpen(true);
+            }
+          } catch (profileError) {
+            if (mounted) setError(profileError.message || "Profil se nije mogao učitati.");
+          }
+        }, 0);
+      });
+
+      subscription = listener?.subscription ?? null;
     };
 
-    supabase.auth.getUser().then(({ data }) => loadProfile(data.user ?? null));
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      loadProfile(session?.user ?? null, event);
-    });
-    return () => listener.subscription.unsubscribe();
+    loadInitialAuth();
+
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const submitNickname = async () => {
@@ -724,16 +775,9 @@ export default function App() {
   const startMainCategory = async (category, authenticatedUser = null) => {
     let currentUser = authenticatedUser || user;
 
-    // Uvijek provjeri stvarnu Supabase sesiju prije pokretanja kategorije.
-    // Tako klik na kategoriju ne ovisi o tome je li React već osvježio user state.
-    if (!currentUser && supabase) {
-      try {
-        const { data } = await supabase.auth.getUser();
-        currentUser = data?.user || null;
-        if (currentUser) setUser(currentUser);
-      } catch {}
-    }
-
+    // Auth stanje se održava centralno u listeneru iznad.
+    // Ako korisnik nije prijavljen, odmah otvori prijavu bez dodatnog
+    // mrežnog poziva koji bi mogao blokirati otvaranje modala.
     if (!currentUser) {
       const pending = { type: "category", category };
       pendingCategoryRef.current = pending;
