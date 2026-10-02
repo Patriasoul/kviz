@@ -1009,6 +1009,43 @@ export default function App() {
         {user && <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm"><UserRound className="h-4 w-4 text-accent" /> <strong>{accountDisplayName}</strong><span className="text-muted-foreground">je prijavljen</span></div>}
       </div></div></section>
 
+      <section id="igre" className="patria-section-dark border-b border-white/10">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-16">
+          <div className="max-w-3xl">
+            <p className="text-xs font-bold uppercase tracking-[.22em] text-[#f1d078]">PatriaSoul · Igre</p>
+            <h2 className="mt-3 text-3xl text-white sm:text-4xl">Odaberi svoju igru.</h2>
+            <p className="mt-4 text-base leading-8 text-white/65">Svaka igra ima svoj karakter. Možeš istraživati široko znanje o Hrvatskoj, braniti svoj grad ili svaki dan prihvatiti novi izazov.</p>
+          </div>
+          <div className="mt-9 grid gap-5 lg:grid-cols-3">
+            <a href="?mode=croatian#kategorije" className="patria-game-card group">
+              <div className="patria-game-number">01</div><div className="patria-icon-ring"><BookOpen className="h-5 w-5" /></div>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">Glavna igra</p>
+              <h3 className="mt-2 text-2xl text-white">Hrvatski kviz</h3>
+              <p className="mt-3 text-sm leading-7 text-white/60">Deset područja znanja i velika baza pitanja. Odaberi temu i kreni u novu rundu.</p>
+              <span className="mt-6 inline-flex items-center font-semibold text-white">Igraj Hrvatski kviz <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </a>
+            <a href="?mode=city" className="patria-game-card group">
+              <div className="patria-game-number">02</div><div className="patria-icon-ring"><MapPin className="h-5 w-5" /></div>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">Grad po grad</p>
+              <h3 className="mt-2 text-2xl text-white">Brani svoj grad</h3>
+              <p className="mt-3 text-sm leading-7 text-white/60">Odaberi grad i pokaži koliko poznaješ njegovu povijest, ljude, mjesta i posebnosti.</p>
+              <span className="mt-6 inline-flex items-center font-semibold text-white">Odaberi grad <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </a>
+            <a href="?mode=daily" className="patria-game-card group">
+              <div className="patria-game-number">03</div><div className="patria-icon-ring"><Trophy className="h-5 w-5" /></div>
+              <p className="mt-5 text-xs font-bold uppercase tracking-[.18em] text-[#f1d078]">Novi izazov svaki dan</p>
+              <h3 className="mt-2 text-2xl text-white">Dnevni kviz</h3>
+              <p className="mt-3 text-sm leading-7 text-white/60">Jedan službeni pokušaj dnevno. Isti dnevni skup pitanja za sve igrače.</p>
+              <span className="mt-6 inline-flex items-center font-semibold text-white">Igraj danas <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+            </a>
+          </div>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <a href="?mode=leaderboard" className="patria-feature group"><Medal className="h-6 w-6 text-[#f1d078]" /><h3 className="mt-4 text-lg text-white">Rang-lista</h3><p className="mt-2 text-sm text-white/60">Prati rezultate i vidi kako stojiš među igračima.</p><span className="mt-4 inline-flex items-center text-sm font-semibold text-white">Otvori rang-listu <ArrowRight className="ml-2 h-4 w-4" /></span></a>
+            <button onClick={openAccount} className="patria-feature text-left"><UserRound className="h-6 w-6 text-[#f1d078]" /><h3 className="mt-4 text-lg text-white">Moj račun</h3><p className="mt-2 text-sm text-white/60">Statistika, rezultati, napredak i značke na jednom mjestu.</p><span className="mt-4 inline-flex items-center text-sm font-semibold text-white">Otvori moj račun <ArrowRight className="ml-2 h-4 w-4" /></span></button>
+          </div>
+        </div>
+      </section>
+
 <section id="nasljede" className="patria-section-dark border-b border-white/10"><div className="mx-auto max-w-6xl px-4 py-12 sm:px-6"><div className="mb-7"><p className="text-xs font-bold uppercase tracking-[.2em] text-[#f1d078]">Zašto PatriaSoul?</p><h2 className="mt-2 text-3xl text-white sm:text-4xl">Testiraj. Čuvaj. Nauči. Prenesi.</h2></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-feature text-left"><span className="patria-icon-ring"><BookOpen className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">TESTIRAJ SVOJE ZNANJE</h3><p className="mt-2 text-sm text-white/60">Provjeri koliko znaš o Hrvatskoj i njezinoj povijesti.</p></button><button onClick={() => document.getElementById("kategorije")?.scrollIntoView({ behavior: "smooth" })} className="patria-feature text-left"><span className="patria-icon-ring"><ShieldCheck className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">ČUVAJ NASLJEĐE</h3><p className="mt-2 text-sm text-white/60">Upoznaj priče, mjesta, običaje i vrijednosti koje vrijedi sačuvati.</p></button><button onClick={() => startMainCategory(categories.find(([id]) => id === "povijest"))} className="patria-feature text-left"><span className="patria-icon-ring"><FileText className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">NAUČI ŠTO JE I KAKO JE BILO</h3><p className="mt-2 text-sm text-white/60">Povijest nam pomaže razumjeti Hrvatsku danas.</p></button><button onClick={openCities} className="patria-feature text-left"><span className="patria-icon-ring"><MapPin className="h-5 w-5" /></span><h3 className="mt-4 text-lg text-white">BUDI DIO PRIČE</h3><p className="mt-2 text-sm text-white/60">Istražuj gradove, upoznaj Hrvatsku i ostavi svoj rezultat.</p></button></div></div></section>
 
       <section className="border-y border-border bg-background">
