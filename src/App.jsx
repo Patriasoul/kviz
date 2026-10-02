@@ -865,7 +865,7 @@ export default function App() {
     if (pending?.type === "category" && Array.isArray(pending.category)) {
       // Ako je ovo prvi ulazak i profil još nema nadimak, prvo tražimo nadimak.
       // Kviz se ne smije pokrenuti ispod modalnog prozora za nadimak.
-      if (!profile?.display_name?.trim()) return;
+      if (nicknameOpen) return;
 
       pendingCategoryRef.current = null;
       try { localStorage.removeItem(pendingCategoryStorageKey); } catch {}
@@ -878,7 +878,7 @@ export default function App() {
       setPendingDeepLink(null);
       handleDeepLink(mode);
     }
-  }, [user, profile, pendingDeepLink]);
+  }, [user, profile, nicknameOpen, pendingDeepLink]);
 
   const activeCategoryTitle = categories.find(([id]) => id === activeCategory)?.[1] ?? "Hrvatski kviz";
   const quizTitle = activeQuizType === "city"
