@@ -75,7 +75,7 @@ export default function App() {
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [pendingDeepLink, setPendingDeepLink] = useState(null);
   const pendingCategoryRef = useRef(null);
-  const pendingCategoryStorageKey = "patriasoul_pending_category_v2";
+  const pendingCategoryStorageKey = "patriasoul_pending_category_v3";
   const [communityComments, setCommunityComments] = useState([]);
   const [communityMembers, setCommunityMembers] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(false);
@@ -727,7 +727,7 @@ export default function App() {
       const pending = { type: "category", category };
       pendingCategoryRef.current = pending;
       try {
-        sessionStorage.setItem(pendingCategoryStorageKey, JSON.stringify(pending));
+        localStorage.setItem(pendingCategoryStorageKey, JSON.stringify(pending));
       } catch {}
       requireAuth(() => {});
       return;
@@ -857,14 +857,18 @@ export default function App() {
     let pending = pendingCategoryRef.current;
     if (!pending?.category) {
       try {
-        const stored = sessionStorage.getItem(pendingCategoryStorageKey);
+        const stored = localStorage.getItem(pendingCategoryStorageKey);
         if (stored) pending = JSON.parse(stored);
       } catch {}
     }
 
     if (pending?.type === "category" && Array.isArray(pending.category)) {
+      // Ako je ovo prvi ulazak i profil još nema nadimak, prvo tražimo nadimak.
+      // Kviz se ne smije pokrenuti ispod modalnog prozora za nadimak.
+      if (!profile?.display_name?.trim()) return;
+
       pendingCategoryRef.current = null;
-      try { sessionStorage.removeItem(pendingCategoryStorageKey); } catch {}
+      try { localStorage.removeItem(pendingCategoryStorageKey); } catch {}
       window.setTimeout(() => startMainCategory(pending.category, user), 0);
       return;
     }
@@ -874,7 +878,7 @@ export default function App() {
       setPendingDeepLink(null);
       handleDeepLink(mode);
     }
-  }, [user, pendingDeepLink]);
+  }, [user, profile, pendingDeepLink]);
 
   const activeCategoryTitle = categories.find(([id]) => id === activeCategory)?.[1] ?? "Hrvatski kviz";
   const quizTitle = activeQuizType === "city"
