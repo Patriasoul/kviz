@@ -1,4 +1,4 @@
-/* Tri odvojena slikovna mjesta za glavne igre. Zamijeni SVG datoteke svojim fotografijama po želji. */
+/* Tri odvojena slikovna mjesta za glavne igre. */
 .patria-game-card:nth-child(1),
 .patria-game-card:nth-child(2),
 .patria-game-card:nth-child(3) {
@@ -8,7 +8,7 @@
 }
 
 .patria-game-card:nth-child(1) {
-  background-image: linear-gradient(180deg, rgba(4,14,27,.10) 0%, rgba(4,14,27,.38) 72%, rgba(4,14,27,.98) 100%), url("./images/game-hrvatski.svg");
+  background-image: linear-gradient(180deg, rgba(4,14,27,.10) 0%, rgba(4,14,27,.38) 72%, rgba(4,14,27,.98) 100%), url("./images/game-hrvatski.jpg");
 }
 .patria-game-card:nth-child(2) {
   background-image: linear-gradient(180deg, rgba(4,14,27,.10) 0%, rgba(4,14,27,.38) 72%, rgba(4,14,27,.98) 100%), url("./images/game-grad.svg");
