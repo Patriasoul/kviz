@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen, MessageCircle, Send, Reply, Trash2, AtSign } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
@@ -74,7 +74,7 @@ export default function App() {
   const [adminResults, setAdminResults] = useState([]);
   const [loadingAdmin, setLoadingAdmin] = useState(false);
   const [pendingDeepLink, setPendingDeepLink] = useState(null);
-  const [pendingCategory, setPendingCategory] = useState(null);
+  const pendingCategoryRef = useRef(null);
   const [communityComments, setCommunityComments] = useState([]);
   const [communityMembers, setCommunityMembers] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(false);
@@ -146,8 +146,15 @@ export default function App() {
 
       if (authEvent === "SIGNED_IN") {
         setAuthOpen(false);
-        setScreen("account");
-        setAccountPage(1);
+        const pending = pendingCategoryRef.current;
+        if (pending?.type === "category" && pending.category) {
+          pendingCategoryRef.current = null;
+          setScreen("home");
+          window.setTimeout(() => startMainCategory(pending.category, currentUser), 0);
+        } else {
+          setScreen("account");
+          setAccountPage(1);
+        }
       }
 
       try {
@@ -721,9 +728,10 @@ export default function App() {
     }
   };
 
-  const startMainCategory = async (category) => {
-    if (!user) {
-      setPendingCategory(category);
+  const startMainCategory = async (category, authenticatedUser = null) => {
+    const currentUser = authenticatedUser || user;
+    if (!currentUser) {
+      pendingCategoryRef.current = { type: "category", category };
       requireAuth(() => {});
       return;
     }
@@ -848,18 +856,12 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    if (pendingCategory) {
-      const category = pendingCategory;
-      setPendingCategory(null);
-      startMainCategory(category);
-      return;
-    }
     if (pendingDeepLink) {
       const mode = pendingDeepLink;
       setPendingDeepLink(null);
       handleDeepLink(mode);
     }
-  }, [user, pendingCategory, pendingDeepLink]);
+  }, [user, pendingDeepLink]);
 
   const activeCategoryTitle = categories.find(([id]) => id === activeCategory)?.[1] ?? "Hrvatski kviz";
   const quizTitle = activeQuizType === "city"
