@@ -1,52 +1,38 @@
-/* PatriaSoul — tri slikovna mjesta za glavne igre.
-   Zamijeni datoteke u public/images/ istim imenima kada želiš svoje fotografije. */
-.patria-game-card:nth-child(1) {
-  background-image:
-    linear-gradient(180deg, rgba(4,14,27,.24) 0%, rgba(4,14,27,.76) 58%, rgba(4,14,27,.98) 100%),
-    url("./images/game-hrvatski.svg");
-  background-size: cover;
-  background-position: center;
-}
-
-.patria-game-card:nth-child(2) {
-  background-image:
-    linear-gradient(180deg, rgba(4,14,27,.24) 0%, rgba(4,14,27,.76) 58%, rgba(4,14,27,.98) 100%),
-    url("./images/game-grad.svg");
-  background-size: cover;
-  background-position: center;
-}
-
+/* Tri odvojena slikovna mjesta za glavne igre. Zamijeni SVG datoteke svojim fotografijama po želji. */
+.patria-game-card:nth-child(1),
+.patria-game-card:nth-child(2),
 .patria-game-card:nth-child(3) {
-  background-image:
-    linear-gradient(180deg, rgba(4,14,27,.24) 0%, rgba(4,14,27,.76) 58%, rgba(4,14,27,.98) 100%),
-    url("./images/game-dnevni.svg");
-  background-size: cover;
-  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 155px;
+  background-position: center top;
 }
 
-.patria-game-card::after {
-  content: "";
-  display: block;
-  height: 145px;
-  margin: -1.5rem -1.5rem 1.15rem;
-  border-bottom: 1px solid rgba(255,255,255,.10);
-  pointer-events: none;
+.patria-game-card:nth-child(1) {
+  background-image: linear-gradient(180deg, rgba(4,14,27,.10) 0%, rgba(4,14,27,.38) 72%, rgba(4,14,27,.98) 100%), url("./images/game-hrvatski.svg");
+}
+.patria-game-card:nth-child(2) {
+  background-image: linear-gradient(180deg, rgba(4,14,27,.10) 0%, rgba(4,14,27,.38) 72%, rgba(4,14,27,.98) 100%), url("./images/game-grad.svg");
+}
+.patria-game-card:nth-child(3) {
+  background-image: linear-gradient(180deg, rgba(4,14,27,.10) 0%, rgba(4,14,27,.38) 72%, rgba(4,14,27,.98) 100%), url("./images/game-dnevni.svg");
 }
 
-.patria-game-card > * {
-  position: relative;
-  z-index: 1;
+.patria-game-card {
+  padding-top: 10.5rem;
 }
 
 .patria-game-card:hover:nth-child(1),
 .patria-game-card:hover:nth-child(2),
 .patria-game-card:hover:nth-child(3) {
-  background-position: center;
-  filter: brightness(1.06);
+  background-position: center top;
+  filter: brightness(1.05);
 }
 
 @media (max-width: 640px) {
-  .patria-game-card::after {
-    height: 115px;
+  .patria-game-card:nth-child(1),
+  .patria-game-card:nth-child(2),
+  .patria-game-card:nth-child(3) {
+    background-size: 100% 130px;
   }
+  .patria-game-card { padding-top: 9rem; }
 }
