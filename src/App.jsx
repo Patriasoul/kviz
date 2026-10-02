@@ -799,12 +799,19 @@ export default function App() {
     setLoadingQuiz(true);
     try {
       const attempt = await startQuizAttempt({ quizType: "croatian", category: category[0] });
+      const questions = Array.isArray(attempt?.questions) ? attempt.questions : [];
+
+      if (!attempt?.attemptId || questions.length !== 10) {
+        throw new Error("Kviz je pokrenut, ali 10 pitanja se nije moglo učitati. Pokušaj ponovno.");
+      }
+
       setCity(null);
       setActiveQuizType("croatian");
       setActiveCategory(category[0]);
       setAttemptId(attempt.attemptId);
-      setRound(attempt.questions);
+      setRound(questions);
       setResult(null);
+      setError("");
       setScreen("quiz");
     } catch (e) {
       setError(e.message || "Pitanja se trenutno ne mogu učitati.");
