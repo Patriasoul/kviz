@@ -7,7 +7,7 @@ import { getMainQuizCount } from "./lib/mainQuiz";
 import { getDailyQuizKey } from "./lib/dailyQuiz";
 import { getLeaderboard, getMyResults, getMyResultStats, hasPlayedDailyQuiz } from "./lib/results";
 import { startQuizAttempt, finishQuizAttempt } from "./lib/attempts";
-import { getMyProfile, saveMyNickname } from "./lib/profile";
+import { getMyProfile, saveMyNickname, saveMyAvatar } from "./lib/profile";
 import { getMyProgress } from "./lib/progress";
 import { getAdminDashboardStats, getAdminUsers, getAdminQuizResults, deleteAdminQuizResult } from "./lib/admin";
 import { supabase } from "./lib/supabase";
@@ -67,7 +67,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [nicknameOpen, setNicknameOpen] = useState(false);
   const [nickname, setNickname] = useState("");
-  const [savingNickname, setSavingNickname] = useState(false);
+  const [savingNickname, setSavingNickname] = useState(false);\n  const [savingAvatar, setSavingAvatar] = useState(false);
   const [playerProgress, setPlayerProgress] = useState([]);
   const [adminStats, setAdminStats] = useState(null);
   const [adminUsers, setAdminUsers] = useState([]);
