@@ -220,6 +220,22 @@ export default function App() {
     };
   }, []);
 
+  const submitAvatar = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setSavingAvatar(true);
+    setError("");
+    try {
+      const saved = await saveMyAvatar(file);
+      setProfile(saved);
+    } catch (avatarError) {
+      setError(avatarError.message || "Profilna slika nije spremljena.");
+    } finally {
+      setSavingAvatar(false);
+      event.target.value = "";
+    }
+  };
+
   const submitNickname = async () => {
     const clean = nickname.trim();
     if (clean.length < 3 || clean.length > 24) {
