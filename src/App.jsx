@@ -67,7 +67,8 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [nicknameOpen, setNicknameOpen] = useState(false);
   const [nickname, setNickname] = useState("");
-  const [savingNickname, setSavingNickname] = useState(false);\n  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [savingNickname, setSavingNickname] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const [playerProgress, setPlayerProgress] = useState([]);
   const [adminStats, setAdminStats] = useState(null);
   const [adminUsers, setAdminUsers] = useState([]);
