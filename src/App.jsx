@@ -1609,7 +1609,8 @@ export default function App() {
             <p className="patria-footer-heading">PatriaSoul</p>
             <div className="mt-4 grid gap-2.5 text-sm">
               <button onClick={home} className="patria-footer-link">Početna</button>
-              <button onClick={openCroatianQuiz} className="patria-footer-link">Hrvatski kviz</button>
+              <a href="https://patriasoul.github.io/Patriasoul-portal/" className="patria-footer-link">📰 PatriaSoul portal</a>
+              <button onClick={openCroatianQuiz} className="patria-footer-link">🎯 Hrvatski kviz</button>
               <button onClick={openCities} className="patria-footer-link">Brani svoj grad</button>
               <button onClick={openDaily} className="patria-footer-link">Dnevni kviz</button>
               <button onClick={() => openLeaderboard()} className="patria-footer-link">Rang-lista</button>
