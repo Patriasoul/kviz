@@ -25,12 +25,10 @@
     <meta name="twitter:image:alt" content="PatriaSoul — Hrvatski kviz" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="PatriaSoul" />
+    <meta name="apple-touch-icon" content="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" />
     <link rel="manifest" href="/kviz/manifest.webmanifest" />
     <link rel="icon" href="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" type="image/png" />
-    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" />
-    <link rel="stylesheet" href="/kviz/game-images.css" />
+    <link rel="stylesheet" href="/kviz/game-images.css?v=20261007-3" />
     <title>PatriaSoul — Hrvatski kviz | Znanje · Ponos · Nasljeđe</title>
     <script type="application/ld+json">
       {
@@ -53,17 +51,21 @@
           try {
             const registrations = await navigator.serviceWorker.getRegistrations();
             const keys = window.caches ? await caches.keys() : [];
-            const hadOldCache = keys.some((key) => key.startsWith("patriasoul-kviz-"));
+            const hadOldCache = registrations.length > 0 || keys.length > 0;
             if (registrations.length || hadOldCache) {
               await Promise.all(registrations.map((registration) => registration.unregister()));
-              if (window.caches) await Promise.all(keys.filter((key) => key.startsWith("patriasoul-kviz-")).map((key) => caches.delete(key)));
-              if (!sessionStorage.getItem("patriasoul-sw-cleaned")) { sessionStorage.setItem("patriasoul-sw-cleaned","1"); window.location.reload(); return; }
+              if (window.caches) await Promise.all(keys.map((key) => caches.delete(key)));
+              if (!sessionStorage.getItem("patriasoul-cache-reset-v5")) {
+                sessionStorage.setItem("patriasoul-cache-reset-v5", "1");
+                window.location.reload();
+                return;
+              }
             }
           } catch (_) {}
         });
       }
     </script>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.jsx?v=20261007-3"></script>
   </body>
 </html>
