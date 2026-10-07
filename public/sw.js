@@ -1,4 +1,4 @@
-const CACHE_NAME = "patriasoul-kviz-v4";
+const CACHE_NAME = "patriasoul-kviz-v5";
 const APP_SHELL = ["/kviz/", "/kviz/index.html", "/kviz/manifest.webmanifest", "/kviz/icons/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -30,7 +30,7 @@ self.addEventListener("fetch", (event) => {
   const isNavigation = event.request.mode === "navigate";
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: "no-store" })
       .then((response) => {
         if (response.ok) {
           const copy = response.clone();
