@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen, MessageCircle, Send, Reply, Trash2, AtSign } from "lucide-react";
+import { ArrowLeft, ArrowRight, Flag, FileText, Loader2, LogIn, LogOut, MapPin, RotateCcw, ShieldCheck, Trophy, UserRound, Medal, BookOpen, MessageCircle, Send, Reply, Trash2, AtSign, Bell } from "lucide-react";
 import Pravilnik from "./pages/Pravilnik";
 import QuizPlayer from "./pages/QuizPlayer";
 import { fetchCities } from "./lib/cityQuiz";
@@ -90,6 +90,8 @@ export default function App() {
   const [communityMentionOpen, setCommunityMentionOpen] = useState(false);
   const [communityNotifications, setCommunityNotifications] = useState([]);
   const [communityNotificationsOpen, setCommunityNotificationsOpen] = useState(false);
+  const [forumNotifications, setForumNotifications] = useState([]);
+  const [noticePanelType, setNoticePanelType] = useState("community");
 
   const accountStats = (() => {
     const results = Array.isArray(accountStatsResults) ? accountStatsResults : [];
@@ -610,6 +612,52 @@ export default function App() {
 
   const loadCommunityNotifications = async () => { if (!user) return; try { setCommunityNotifications(await getCommunityNotifications()); } catch (e) { setError(e.message || "Obavijesti se trenutno ne mogu učitati."); } };
 
+  const loadForumNotifications = async () => {
+    if (!user || !supabase) return;
+    try {
+      const { data: rows, error: rowsError } = await supabase.from("forum_notifications")
+        .select("id,user_id,actor_id,topic_id,post_id,type,read_at,created_at")
+        .eq("user_id", user.id).is("read_at", null).order("created_at", { ascending: false }).limit(30);
+      if (rowsError) throw rowsError;
+      const rowsSafe = rows || [];
+      const actorIds = [...new Set(rowsSafe.map((row) => row.actor_id).filter(Boolean))];
+      const topicIds = [...new Set(rowsSafe.map((row) => row.topic_id).filter(Boolean))];
+      const [actorsResult, topicsResult] = await Promise.all([
+        actorIds.length ? supabase.from("profiles").select("id,display_name").in("id", actorIds) : Promise.resolve({ data: [] }),
+        topicIds.length ? supabase.from("forum_topics").select("id,title").in("id", topicIds) : Promise.resolve({ data: [] }),
+      ]);
+      if (actorsResult.error) throw actorsResult.error;
+      if (topicsResult.error) throw topicsResult.error;
+      const actors = new Map((actorsResult.data || []).map((row) => [row.id, row.display_name]));
+      const topics = new Map((topicsResult.data || []).map((row) => [row.id, row.title]));
+      setForumNotifications(rowsSafe.map((row) => ({
+        ...row,
+        actor_name: actors.get(row.actor_id) || "Član PatriaSoul",
+        topic_title: topics.get(row.topic_id) || "Forumska tema",
+      })));
+    } catch (e) {
+      setError(e.message || "Obavijesti foruma se trenutačno ne mogu učitati.");
+    }
+  };
+
+  const openForumNotification = async (notification) => {
+    try {
+      await supabase.from("forum_notifications").update({ read_at: new Date().toISOString() })
+        .eq("id", notification.id).eq("user_id", user.id);
+    } catch {}
+    setForumNotifications((items) => items.filter((item) => item.id !== notification.id));
+    setCommunityNotificationsOpen(false);
+    window.location.href = "https://patriasoul.github.io/Patriasoul-portal-v2/stranice/domoljubni-forum.html?topic=" + encodeURIComponent(notification.topic_id);
+  };
+
+  useEffect(() => {
+    if (!user) { setForumNotifications([]); return undefined; }
+    loadCommunityNotifications();
+    loadForumNotifications();
+    const timer = window.setInterval(() => { loadCommunityNotifications(); loadForumNotifications(); }, 60000);
+    return () => window.clearInterval(timer);
+  }, [user?.id]);
+
   const openCommunity = async () => {
     if (!user) {
       requireAuth(openCommunity);
@@ -631,6 +679,10 @@ export default function App() {
       setError(e.message || "Zajednica se trenutno ne može učitati.");
     } finally {
       setCommunityLoading(false);
+    }
+    if (window.location.hash.startsWith("#community-comment-")) {
+      const targetId = decodeURIComponent(window.location.hash.slice(1));
+      window.setTimeout(() => document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "center" }), 160);
     }
   };
 
@@ -731,7 +783,8 @@ export default function App() {
     }
   };
 
-  const openCommunityNotification = async (notification) => { await markCommunityNotificationRead(notification.id); setCommunityNotifications((items) => items.filter((item) => item.id !== notification.id)); setCommunityNotificationsOpen(false); setScreen("community"); await refreshCommunity(); window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 0); };
+  const openCommunityNotification = async (notification) => { await markCommunityNotificationRead(notification.id); setCommunityNotifications((items) => items.filter((item) => item.id !== notification.id)); setCommunityNotificationsOpen(false); setScreen("community"); await refreshCommunity(); const targetId = notification.comment_parent_id || notification.comment_id;
+    window.setTimeout(() => document.getElementById("community-comment-" + targetId)?.scrollIntoView({ behavior: "smooth", block: "center" }), 120); };
 
   const formatCommunityTime = (value) => {
     const date = new Date(value);
@@ -871,6 +924,10 @@ export default function App() {
     }
     if (mode === "account") {
       openAccount();
+      return;
+    }
+    if (mode === "community") {
+      openCommunity();
     }
   };
 
@@ -920,7 +977,7 @@ export default function App() {
 
   useEffect(() => {
     const mode = new URLSearchParams(window.location.search).get("mode");
-    if (!mode || !["croatian", "city", "cities", "daily", "leaderboard", "account"].includes(mode)) return;
+    if (!mode || !["croatian", "city", "cities", "daily", "leaderboard", "account", "community"].includes(mode)) return;
 
     window.history.replaceState({}, "", window.location.pathname + window.location.hash);
 
@@ -1012,11 +1069,15 @@ export default function App() {
           <button onClick={openDaily} className="patria-nav-link">📅 Dnevni kviz</button>
           <button onClick={() => openLeaderboard()} className="patria-nav-link"><Medal className="h-4 w-4" /> Rang-lista</button>
           {user && <button onClick={openCommunity} className="patria-nav-link"><MessageCircle className="h-4 w-4" /> Zajednica</button>}
-          {user && <button onClick={() => { setCommunityNotificationsOpen((v) => !v); loadCommunityNotifications(); }} className="patria-nav-link relative"><span className="relative"><AtSign className="h-4 w-4" />{communityNotifications.length > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-black text-white">{communityNotifications.length > 9 ? "9+" : communityNotifications.length}</span>}</span> Obavijesti</button>}
+          {user && <><button onClick={() => { setNoticePanelType("community"); setCommunityNotificationsOpen((v) => noticePanelType === "community" ? !v : true); loadCommunityNotifications(); }} aria-label="Poruke i odgovori" title="Poruke i odgovori" className={`patria-nav-link relative ${communityNotifications.length ? "text-emerald-400 animate-pulse" : ""}`}><span className="relative"><MessageCircle className="h-4 w-4" />{communityNotifications.length > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-emerald-600 px-1 text-[9px] font-black text-white">{communityNotifications.length > 9 ? "9+" : communityNotifications.length}</span>}</span></button><button onClick={() => { setNoticePanelType("forum"); setCommunityNotificationsOpen((v) => noticePanelType === "forum" ? !v : true); loadForumNotifications(); }} aria-label="Obavijesti foruma" title="Obavijesti foruma" className={`patria-nav-link relative ${forumNotifications.length ? "text-amber-300 animate-pulse" : ""}`}><span className="relative"><Bell className="h-4 w-4" />{forumNotifications.length > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-slate-950">{forumNotifications.length > 9 ? "9+" : forumNotifications.length}</span>}</span></button></>}
           {user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> {accountDisplayName}</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Prijava</button>}
         </nav>
 
-        <details className="patria-mobile-menu">
+        <div className="patria-mobile-notice-tools flex items-center gap-1 md:hidden">
+        {user && <button type="button" onClick={() => { setNoticePanelType("community"); setCommunityNotificationsOpen((v) => noticePanelType === "community" ? !v : true); loadCommunityNotifications(); }} aria-label="Poruke i odgovori" title="Poruke i odgovori" className={`relative rounded-lg border border-white/15 p-2 ${communityNotifications.length ? "text-emerald-400 animate-pulse" : "text-white"}`}><MessageCircle className="h-5 w-5" />{communityNotifications.length > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-emerald-600 px-1 text-[9px] font-black text-white">{communityNotifications.length > 9 ? "9+" : communityNotifications.length}</span>}</button>}
+        {user && <button type="button" onClick={() => { setNoticePanelType("forum"); setCommunityNotificationsOpen((v) => noticePanelType === "forum" ? !v : true); loadForumNotifications(); }} aria-label="Obavijesti foruma" title="Obavijesti foruma" className={`relative rounded-lg border border-white/15 p-2 ${forumNotifications.length ? "text-amber-300 animate-pulse" : "text-white"}`}><Bell className="h-5 w-5" />{forumNotifications.length > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1 text-[9px] font-black text-slate-950">{forumNotifications.length > 9 ? "9+" : forumNotifications.length}</span>}</button>}
+      </div>
+      <details className="patria-mobile-menu">
         <summary className="patria-mobile-menu-button" aria-label="Otvori izbornik"><span aria-hidden="true">☰</span><span className="sr-only">Izbornik</span></summary>
         <nav id="patria-mobile-nav" className="patria-mobile-nav">
           <button onClick={home} className="patria-mobile-nav-link">⌂ <span>Početna</span></button>
@@ -1025,6 +1086,8 @@ export default function App() {
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openDaily(); }} className="patria-mobile-nav-link">📅 <span>Dnevni kviz</span></button>
           <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openLeaderboard(); }} className="patria-mobile-nav-link"><Medal className="h-5 w-5" /><span>Rang-lista</span></button>
           {user && <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openCommunity(); }} className="patria-mobile-nav-link"><MessageCircle className="h-5 w-5" /><span>Zajednica</span></button>}
+          {user && <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setNoticePanelType("community"); setCommunityNotificationsOpen(true); loadCommunityNotifications(); }} className="patria-mobile-nav-link"><MessageCircle className="h-5 w-5 text-emerald-400" /><span>Poruke i odgovori {communityNotifications.length ? `(${communityNotifications.length})` : ""}</span></button>}
+          {user && <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); setNoticePanelType("forum"); setCommunityNotificationsOpen(true); loadForumNotifications(); }} className="patria-mobile-nav-link"><Bell className="h-5 w-5 text-amber-300" /><span>Obavijesti foruma {forumNotifications.length ? `(${forumNotifications.length})` : ""}</span></button>}
           {user ? <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); openAccount(); }} className="patria-mobile-nav-link"><UserRound className="h-5 w-5" /><span>{accountDisplayName}</span></button> : <button onClick={(event) => { event.currentTarget.closest("details")?.removeAttribute("open"); signIn(); }} className="patria-mobile-nav-link"><LogIn className="h-5 w-5" /><span>Prijava</span></button>}
         </nav>
       </details>
@@ -1452,7 +1515,7 @@ export default function App() {
       </>}
     </main>}
 
-    {communityNotificationsOpen && user && <div className="fixed right-4 top-20 z-[60] w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-accent/25 bg-card shadow-2xl"><div className="flex items-center justify-between border-b border-border bg-primary/80 px-4 py-3"><div><p className="text-sm font-bold">Obavijesti</p><p className="text-xs text-muted-foreground">{communityNotifications.length ? "Netko te je spomenuo ili ti odgovorio." : "Nema novih obavijesti."}</p></div><button type="button" onClick={() => setCommunityNotificationsOpen(false)} className="text-xs font-bold text-accent">Zatvori</button></div><div className="max-h-[60vh] overflow-y-auto">{communityNotifications.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">Sve je pročitano. 👌</div> : communityNotifications.map((notification) => <button key={notification.id} type="button" onClick={() => openCommunityNotification(notification)} className="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5"><div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent"><AtSign className="h-4 w-4" /></span><div><p className="text-sm"><strong>{notification.actor_name}</strong> {notification.type === "reply" ? "ti je odgovorio/la." : "te je spomenuo/la."}</p><p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.comment_text}</p></div></div></button>)}</div></div>}
+    {communityNotificationsOpen && user && <div className="absolute right-4 top-20 z-[60] w-[min(390px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-accent/25 bg-card shadow-2xl"><div className="flex items-center justify-between border-b border-border bg-primary/80 px-4 py-3"><div><p className="text-sm font-bold">{noticePanelType === "community" ? "Poruke i odgovori" : "Obavijesti foruma"}</p><p className="text-xs text-muted-foreground">{noticePanelType === "community" ? (communityNotifications.length ? "Netko te je spomenuo ili ti odgovorio." : "Nema novih poruka.") : (forumNotifications.length ? "Nova aktivnost u domoljubnom forumu." : "Nema novih obavijesti foruma.")}</p></div><button type="button" onClick={() => setCommunityNotificationsOpen(false)} className="text-xs font-bold text-accent">Zatvori</button></div><div className="max-h-[60vh] overflow-y-auto">{noticePanelType === "community" ? (communityNotifications.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">Sve je pročitano. 👌</div> : communityNotifications.map((notification) => <button key={notification.id} type="button" onClick={() => openCommunityNotification(notification)} className="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5"><div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400"><MessageCircle className="h-4 w-4" /></span><div><p className="text-sm"><strong>{notification.actor_name}</strong> {notification.type === "reply" ? "ti je odgovorio/la." : "te je spomenuo/la."}</p><p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.comment_text}</p></div></div></button>)) : (forumNotifications.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">Sve je pročitano. 👌</div> : forumNotifications.map((notification) => <button key={notification.id} type="button" onClick={() => openForumNotification(notification)} className="block w-full border-b border-border px-4 py-4 text-left hover:bg-white/5"><div className="flex items-start gap-3"><span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-300"><Bell className="h-4 w-4" /></span><div><p className="text-sm"><strong>{notification.actor_name}</strong> {notification.type === "reply" ? "odgovorio/la je na temu." : "nova aktivnost na forumu."}</p><p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{notification.topic_title}</p></div></div></button>))}</div></div>}
 
     {screen === "community" && <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
       <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -1524,7 +1587,7 @@ export default function App() {
           {communityComments.filter((comment) => !comment.parent_id).map((comment) => {
             const replies = communityComments.filter((reply) => reply.parent_id === comment.id);
             const canDelete = user?.id === comment.user_id || profile?.role === "admin";
-            return <article key={comment.id} className="patria-card p-5 sm:p-6">
+            return <article key={comment.id} id={"community-comment-" + comment.id} className="patria-card p-5 sm:p-6">
               <div className="flex gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-accent/10 font-bold text-accent">{comment.display_name?.slice(0,1).toUpperCase() || "P"}</div>
                 <div className="min-w-0 flex-1">
