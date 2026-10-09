@@ -783,8 +783,7 @@ export default function App() {
     }
   };
 
-  const openCommunityNotification = async (notification) => { await markCommunityNotificationRead(notification.id); setCommunityNotifications((items) => items.filter((item) => item.id !== notification.id)); setCommunityNotificationsOpen(false); setScreen("community"); await refreshCommunity(); const targetComment = communityComments.find((comment) => comment.id === notification.comment_id);
-    const targetId = targetComment?.parent_id || notification.comment_id;
+  const openCommunityNotification = async (notification) => { await markCommunityNotificationRead(notification.id); setCommunityNotifications((items) => items.filter((item) => item.id !== notification.id)); setCommunityNotificationsOpen(false); setScreen("community"); await refreshCommunity(); const targetId = notification.comment_parent_id || notification.comment_id;
     window.setTimeout(() => document.getElementById("community-comment-" + targetId)?.scrollIntoView({ behavior: "smooth", block: "center" }), 120); };
 
   const formatCommunityTime = (value) => {
