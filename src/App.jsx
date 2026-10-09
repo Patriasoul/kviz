@@ -680,6 +680,10 @@ export default function App() {
     } finally {
       setCommunityLoading(false);
     }
+    if (window.location.hash.startsWith("#community-comment-")) {
+      const targetId = decodeURIComponent(window.location.hash.slice(1));
+      window.setTimeout(() => document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "center" }), 160);
+    }
   };
 
   const loadMoreCommunityComments = async () => {
@@ -779,7 +783,7 @@ export default function App() {
     }
   };
 
-  const openCommunityNotification = async (notification) => { await markCommunityNotificationRead(notification.id); setCommunityNotifications((items) => items.filter((item) => item.id !== notification.id)); setCommunityNotificationsOpen(false); setScreen("community"); await refreshCommunity(); window.setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 0); };
+  const openCommunityNotification = async (notification) => { await markCommunityNotificationRead(notification.id); setCommunityNotifications((items) => items.filter((item) => item.id !== notification.id)); setCommunityNotificationsOpen(false); setScreen("community"); await refreshCommunity(); window.setTimeout(() => document.getElementById("community-comment-" + notification.comment_id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 120); };
 
   const formatCommunityTime = (value) => {
     const date = new Date(value);
@@ -1578,7 +1582,7 @@ export default function App() {
           {communityComments.filter((comment) => !comment.parent_id).map((comment) => {
             const replies = communityComments.filter((reply) => reply.parent_id === comment.id);
             const canDelete = user?.id === comment.user_id || profile?.role === "admin";
-            return <article key={comment.id} className="patria-card p-5 sm:p-6">
+            return <article key={comment.id} id={"community-comment-" + comment.id} className="patria-card p-5 sm:p-6">
               <div className="flex gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-accent/10 font-bold text-accent">{comment.display_name?.slice(0,1).toUpperCase() || "P"}</div>
                 <div className="min-w-0 flex-1">
