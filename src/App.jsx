@@ -1073,7 +1073,11 @@ export default function App() {
           {user ? <button onClick={openAccount} className="patria-nav-link"><UserRound className="h-4 w-4" /> {accountDisplayName}</button> : <button onClick={signIn} className="patria-nav-link"><LogIn className="h-4 w-4" /> Prijava</button>}
         </nav>
 
-        <details className="patria-mobile-menu">
+        <div className="patria-mobile-notice-tools flex items-center gap-1 md:hidden">
+        {user && <button type="button" onClick={() => { setNoticePanelType("community"); setCommunityNotificationsOpen((v) => noticePanelType === "community" ? !v : true); loadCommunityNotifications(); }} aria-label="Poruke i odgovori" title="Poruke i odgovori" className={`relative rounded-lg border border-white/15 p-2 ${communityNotifications.length ? "text-emerald-400 animate-pulse" : "text-white"}`}><MessageCircle className="h-5 w-5" />{communityNotifications.length > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-emerald-600 px-1 text-[9px] font-black text-white">{communityNotifications.length > 9 ? "9+" : communityNotifications.length}</span>}</button>}
+        {user && <button type="button" onClick={() => { setNoticePanelType("forum"); setCommunityNotificationsOpen((v) => noticePanelType === "forum" ? !v : true); loadForumNotifications(); }} aria-label="Obavijesti foruma" title="Obavijesti foruma" className={`relative rounded-lg border border-white/15 p-2 ${forumNotifications.length ? "text-amber-300 animate-pulse" : "text-white"}`}><Bell className="h-5 w-5" />{forumNotifications.length > 0 && <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1 text-[9px] font-black text-slate-950">{forumNotifications.length > 9 ? "9+" : forumNotifications.length}</span>}</button>}
+      </div>
+      <details className="patria-mobile-menu">
         <summary className="patria-mobile-menu-button" aria-label="Otvori izbornik"><span aria-hidden="true">☰</span><span className="sr-only">Izbornik</span></summary>
         <nav id="patria-mobile-nav" className="patria-mobile-nav">
           <button onClick={home} className="patria-mobile-nav-link">⌂ <span>Početna</span></button>
