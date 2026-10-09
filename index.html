@@ -65,7 +65,52 @@
         });
       }
     </script>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx?v=20261007-3"></script>
+    <div id="root">
+      <div id="patriasoul-startup" role="status" style="min-height:100vh;display:grid;place-items:center;padding:24px;box-sizing:border-box;background:#071426;color:#fff;font-family:Inter,system-ui,sans-serif;text-align:center">
+        <div><div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#f6d47e;font-weight:800">PatriaSoul</div><h1 style="font-size:clamp(26px,6vw,40px);margin:12px 0">Učitavam Hrvatski kviz…</h1><p style="color:#cbd5e1">Molimo pričekaj trenutak.</p></div>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const startupId = "patriasoul-startup";
+        const showStartupError = (message) => {
+          const panel = document.getElementById(startupId);
+          if (!panel) return;
+          panel.setAttribute("role", "alert");
+          panel.innerHTML = "";
+          const wrap = document.createElement("div");
+          wrap.style.cssText = "max-width:680px;text-align:left;border:1px solid rgba(246,212,126,.45);border-radius:16px;padding:24px;background:#0d2238";
+          const title = document.createElement("h1");
+          title.textContent = "Kviz se nije uspio pokrenuti";
+          title.style.cssText = "font-size:clamp(24px,5vw,34px);margin:0 0 12px;color:#f6d47e";
+          const detail = document.createElement("p");
+          detail.textContent = message;
+          detail.style.cssText = "line-height:1.6;color:#e2e8f0;overflow-wrap:anywhere";
+          const retry = document.createElement("button");
+          retry.textContent = "Pokušaj ponovno";
+          retry.style.cssText = "margin-top:12px;padding:12px 16px;border:0;border-radius:9px;background:#f6d47e;color:#101b29;font-weight:800";
+          retry.onclick = () => window.location.reload();
+          wrap.append(title, detail, retry);
+          panel.append(wrap);
+        };
+        window.addEventListener("error", (event) => {
+          if (event.target && event.target.tagName === "SCRIPT") {
+            showStartupError("Preglednik nije uspio učitati JavaScript datoteku: " + (event.target.src || "nepoznata adresa"));
+          } else if (event.message) {
+            showStartupError("JavaScript: " + event.message);
+          }
+        }, true);
+        window.addEventListener("unhandledrejection", (event) => {
+          const reason = event.reason;
+          showStartupError("Greška pri pokretanju: " + (reason?.message || String(reason || "nepoznata greška")));
+        });
+        window.setTimeout(() => {
+          if (document.getElementById(startupId)) {
+            showStartupError("Aplikacija se nije pokrenula u 15 sekundi. To obično znači da se JavaScript datoteka nije učitala ili je došlo do pogreške pri pokretanju.");
+          }
+        }, 15000);
+      })();
+    </script>
+    <script type="module" src="/src/main.jsx?v=20261009-diagnostic"></script>
   </body>
 </html>
