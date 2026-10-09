@@ -28,7 +28,7 @@
     <meta name="apple-touch-icon" content="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" />
     <link rel="manifest" href="/kviz/manifest.webmanifest" />
     <link rel="icon" href="https://raw.githubusercontent.com/Patriasoul/patriasoul/main/images/file_0000000082ec81f4a6fc17bdbd959622_114540.png" type="image/png" />
-    <link rel="stylesheet" href="/kviz/game-images.css?v=20261007-3" />
+    <link rel="stylesheet" href="/kviz/game-images.css?v=20261009-1" />
     <title>PatriaSoul — Hrvatski kviz | Znanje · Ponos · Nasljeđe</title>
     <script type="application/ld+json">
       {
@@ -55,8 +55,8 @@
             if (registrations.length || hadOldCache) {
               await Promise.all(registrations.map((registration) => registration.unregister()));
               if (window.caches) await Promise.all(keys.map((key) => caches.delete(key)));
-              if (!sessionStorage.getItem("patriasoul-cache-reset-v5")) {
-                sessionStorage.setItem("patriasoul-cache-reset-v5", "1");
+              if (!sessionStorage.getItem("patriasoul-cache-reset-v6")) {
+                sessionStorage.setItem("patriasoul-cache-reset-v6", "1");
                 window.location.reload();
                 return;
               }
