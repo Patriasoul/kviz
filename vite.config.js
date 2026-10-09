@@ -1,10 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+// GitHub Pages serves this project from /kviz/.
+// Cloudflare Workers serves it from the domain root.
+const base = process.env.GITHUB_ACTIONS === "true" ? "/kviz/" : "/";
+
 export default defineConfig({
   plugins: [react()],
-  // Cloudflare Worker deploys this app at the domain root.
-  // The old GitHub Pages path (/kviz/) caused assets to be requested
-  // from /kviz/... and resulted in a blank page on workers.dev.
-  base: "/",
+  base,
 });
