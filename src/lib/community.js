@@ -74,7 +74,7 @@ export async function createCommunityNotification({ userId, commentId, type = "m
 export async function getCommunityNotifications() {
   const { data, error } = await supabase
     .from("community_notifications")
-    .select("id,user_id,actor_id,comment_id,type,read_at,created_at,comments:community_comments(content),actor:profiles!community_notifications_actor_id_fkey(display_name)")
+    .select("id,user_id,actor_id,comment_id,type,read_at,created_at,comments:community_comments(content,parent_id),actor:profiles!community_notifications_actor_id_fkey(display_name)")
     .is("read_at", null)
     .order("created_at", { ascending: false })
     .limit(30);
@@ -83,6 +83,7 @@ export async function getCommunityNotifications() {
     ...row,
     actor_name: row.actor?.display_name || "PatriaSoul igrač",
     comment_text: row.comments?.content || "",
+    comment_parent_id: row.comments?.parent_id || null,
   }));
 }
 
