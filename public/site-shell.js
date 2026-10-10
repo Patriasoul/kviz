@@ -2,7 +2,7 @@
   const root = document.documentElement;
   const path = window.location.pathname;
   const appBase = "/kviz/";
-  const portalUrl = "https://patriasoul.github.io/Patriasoul-portal-v2/";
+  const portalUrl = "https://cn-dom.github.io/ps/";
   const links = {
     home: appBase,
     croatian: appBase + "?mode=croatian",
@@ -105,7 +105,7 @@
           <div>
             <p class="ps-heading">PatriaSoul</p>
             <div class="ps-footer-links">
-              <a href="https://patriasoul.github.io/Patriasoul-portal-v2/">Povratak na PatriaSoul portal</a>
+              <a href="https://cn-dom.github.io/ps/">Povratak na PatriaSoul portal</a>
               <a href="${links.home}">Početna</a>
               <a href="${links.croatian}">Hrvatski kviz</a>
               <a href="${links.cities}">Brani svoj grad</a>
