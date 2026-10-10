@@ -1,7 +1,9 @@
 (() => {
   const root = document.documentElement;
   const path = window.location.pathname;
-  const appBase = "/kviz/";
+  const marker = "/kviz/";
+  const markerIndex = path.indexOf(marker);
+  const appBase = markerIndex >= 0 ? path.slice(0, markerIndex) + marker : "/kviz/";
   const portalUrl = "https://cn-dom.github.io/ps/";
   const links = {
     home: appBase,
